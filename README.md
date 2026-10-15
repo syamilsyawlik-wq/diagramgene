@@ -23,7 +23,7 @@ cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 Isi `APP_PASSWORD` di `.streamlit/secrets.toml` dengan password sendiri, lalu:
 
 ```bash
-.venv/bin/python -m streamlit run app.py
+.venv/bin/python -m streamlit run app.py --server.address 127.0.0.1
 ```
 
 Pada Windows, gunakan `.venv\Scripts\python.exe` sebagai pengganti
@@ -37,75 +37,42 @@ konfigurasi dan menutup akses konversi. Jangan commit password.
 Devcontainer menyiapkan venv dan dependensi otomatis, lalu menjalankan Streamlit
 pada port 8501 dengan perlindungan CORS dan XSRF bawaan tetap aktif.
 
-## Mencoba konversi
+## Impor dengan identitas master dan relasi
 
-1. Login dan pilih mode.
-2. Upload `examples/proses_sederhana.drawio` untuk BPMN atau diagram umum,
-   atau `examples/portofolio_aplikasi.csv` untuk TRM. Contoh ini berisi data sintetis.
-3. Untuk mode diagram umum, konfigurasi katalog EA seperti petunjuk berikut.
-   Untuk mencoba tanpa katalog, nonaktifkan **Pakai ulang objek dari katalog EA**.
-4. Buat script, periksa preview/ringkasan dan peringatan, lalu unduh file `.js`.
-5. Di Sparx EA, buka **Specialize > Scripting**, buat script berbahasa **JScript**,
-   dan paste hasilnya.
-6. Pilih package tujuan di Project Browser, lalu jalankan script. Coba dahulu
-   pada package sandbox atau file `.qea` lokal.
+Generator BPMN dan Generic sekarang memakai shared import plan, katalog berscope,
+review elemen/relasi, dan preflight terhadap repository EA aktif. Default script
+adalah **VALIDATE_ONLY**: tidak membuat atau mengubah model.
 
-Setiap eksekusi membuat sub-package dan diagram output baru. Objek yang terikat
-ke katalog memakai identitas yang sama; objek lokal yang tidak dikelola katalog
-tetap dibuat baru. Preview merupakan perkiraan layout, bukan render Sparx EA.
+1. Di Sparx EA melalui Wine pada macOS, pilih root katalog dan jalankan
+   `export_ea_catalogue.js` sebagai **JScript**. Simpan output JSON v2 secara privat.
+2. Di sidebar DiagramGene pilih **Local Testing** atau **Holding Production**,
+   upload snapshot, periksa expected identity, root/scope katalog dan package output.
+   Memilih profile tidak membuktikan repository EA aktif sama; runtime memeriksa ulang.
+3. Upload diagram, pilih halaman dan periksa semantic type. Pada tabel review,
+   pilih master GUID yang benar untuk **REUSE**, atau setujui **NEW** per elemen.
+4. Periksa endpoint, tipe, arah, nama/meaning dan ConnectorGUID di tabel relasi.
+   Pembuatan relasi baru membutuhkan persetujuan per baris karena mengubah model
+   repository, termasuk ketika kedua endpoint merupakan master existing.
+5. Download dan jalankan script VALIDATE_ONLY di EA. Setelah validasi serta
+   acceptance test EA lulus, pilih EXECUTE, setujui rencana dan generate ulang.
 
-### Pakai Actor Manager dari katalog perusahaan
+Actor `Manager` pada `examples/manager_dan_proses.drawio` dapat dipetakan ke satu
+Actor katalog pada dua diagram dengan ElementGUID/ElementID yang sama. Pool/Lane
+BPMN dapat direuse jika parent dan konteks cocok. Parent salah, ambigu, GUID stale,
+MDG tidak tersedia atau repository berbeda menghentikan proses sebelum penulisan.
+CSV katalog lama tetap bisa dibaca untuk discovery; gunakan snapshot v2 untuk reuse runtime.
 
-Fitur ini tersedia di **Diagram umum → entitas & relasi**, untuk UML dan ArchiMate.
-Tujuannya menggunakan objek model yang sama pada banyak diagram. Contohnya,
-Actor `Manager` dalam katalog dipasang ke diagram Persetujuan Anggaran dan
-Persetujuan Pengadaan dengan **ElementID dan GUID yang sama**. Connector dari
-kedua proses mengarah ke Actor katalog tersebut; Actor tidak disalin ke package output.
+**Status: tes otomatis bukan bukti kompatibilitas EA nyata. Acceptance EA masih
+belum dijalankan dan memblokir rilis produksi.** Panduan lengkap, arsitektur, file
+berubah, contoh Manager dan batas metamodel ada di
+[repository-aware import](docs/repository-aware-import.md). Ikuti
+[manual acceptance macOS/Wine](docs/manual-acceptance-wine.md) pada `.qea` lokal.
 
-1. Aktifkan **Pakai ulang objek dari katalog EA** (aktif secara default).
-2. Masukkan **GUID root package katalog** pada model EA tujuan. Seluruh
-   sub-package katalog ikut dicari; objek di luar root tersebut tidak dipakai.
-3. Opsional untuk pemeriksaan sebelum impor: unduh `export_ea_catalogue.js`,
-   pilih root package katalog di EA, dan jalankan sebagai JScript. Script hanya
-   membaca model. Salin output mulai header `GUID,Name,...` ke file CSV UTF-8,
-   lalu upload sebagai **Metadata katalog EA**. Jangan sertakan pesan lain di CSV.
-4. Upload diagram. Bentuk Actor dikenali sebagai UML Actor / ArchiMate Business
-   Actor. Jika sumber hanya berisi kotak atau bentuk catatan bertuliskan `Manager`,
-   metadata katalog dapat mengusulkan tipe Actor dan GUID yang cocok.
-5. Periksa tabel tipe dan **Cocokkan dengan objek katalog EA**. Jika nama ambigu,
-   tentukan tipe dan GUID objek yang benar dari kandidat beserta package asalnya.
-   Tipe Class hasil default tidak dianggap bukti bahwa sebuah kotak adalah data
-   Class jika ada beberapa kandidat katalog bernama sama.
-6. Generate script, pilih package output di EA, dan jalankan. Script memvalidasi
-   semua binding terlebih dahulu, lalu menempatkan referensi objek katalog pada
-   diagram dan membuat/memakai ulang connector ke objek tersebut.
-
-**Tipe yang wajib memakai katalog** awalnya Actor, ArchiMate Business Actor, dan
-Business Role. Tambahkan Activity, Business Process, Application Component, atau
-tipe lain jika katalog tersebut juga menjadi sumber master untuk proses/aplikasi/data.
-Pencocokan otomatis memakai nama (abaikan kapitalisasi dan spasi berlebih) serta
-tipe. Binding GUID eksplisit tetap berlaku ketika nama visual berbeda dari nama
-master. Saat runtime, tipe dan keberadaan GUID di root katalog diperiksa ulang;
-CSV merupakan snapshot metadata, bukan pengganti model EA tujuan.
-
-Default **Batalkan impor** menghentikan proses sebelum perubahan model bila nama
-ambigu, master wajib belum ada, GUID tidak ditemukan, atau tipe tidak cocok. Tidak
-ada fallback ke Note atau Actor lokal. Opsi **Buat master baru di katalog** dapat
-dipilih secara eksplisit untuk membuat master yang belum ada di root katalog;
-referensi berikutnya dalam impor yang sama menggunakan master baru tersebut.
-Objek katalog yang telah ada tidak diganti nama, dipindahkan, atau ditimpa notes-nya.
-
-Connector yang sudah ada dipakai ulang jika endpoint, tipe, stereotype, nama,
-dan arah identik. Pengulangan impor tetap membuat diagram/package output baru;
-fitur ini bukan sinkronisasi atau penghapusan model lama secara otomatis. Jika
-satu objek katalog muncul beberapa kali pada halaman sumber, diagram hasil
-menempatkannya sekali dan semua connector tetap mengarah ke objek yang sama.
-
-Coba `examples/manager_dan_proses.drawio`: dua diagram proses memakai Actor Manager
-yang sama. Jalankan pada salinan model/sandbox untuk memverifikasi integrasi dengan
-katalog perusahaan. UI tidak membuka file `.qea` di server; akses model dan reuse
-terjadi saat JScript dijalankan di dalam Sparx EA. Reuse katalog ini belum diterapkan
-ke generator BPMN dan TRM; lane BPMN tidak otomatis dianggap Actor katalog.
+Setiap EXECUTE dapat membuat package/diagram output baru; tidak ada sinkronisasi
+penuh atau rollback otomatis. Master dan connector existing tidak ditimpa/dihapus.
+Referensi semantik resmi participant/partition/process BPMN dan resolver TRM adalah
+P1. TRM tetap tersedia untuk pengujian lokal dengan persetujuan; penulisan TRM
+production diblokir sampai integrasi tersebut selesai.
 
 ### Diagram umum: entitas yang bisa direlasikan
 
@@ -118,7 +85,7 @@ untuk seluruh kotak dan bentuk catatan.
 Sesudah upload, buka **Pemetaan tipe elemen sebelum konversi** untuk menyesuaikan
 tipe per elemen. Contoh: CRM → Component, Server/Network → Node, Data pelanggan →
 Class. Bentuk Actor/umlActor dipetakan menjadi Actor dan umlActivity menjadi Activity.
-Wadah tetap Boundary dan teks lepas tetap Note, kecuali diubah atau dicocokkan ke katalog.
+Wadah diusulkan sebagai Boundary dan teks lepas sebagai Note; review menentukan tipe dan master final.
 
 Profil **ArchiMate 3** menyediakan Business Actor/Role/Process/Service/Object,
 Application Component/Service/Function/Interface, Data Object, Node, Device,
@@ -131,9 +98,9 @@ Tipe default dipakai bila tidak ada petunjuk. Profil MDG **ArchiMate 3** harus
 aktif pada instalasi Sparx EA tujuan.
 
 Connector dibuat antara ID entitas hasil konversi, sehingga penggantian tipe tidak
-membutuhkan penggambaran ulang relasi. Nama relasi dan arah panah dari sumber tetap
-dipakai, termasuk arah terbalik, dua arah, dan relasi ke diri sendiri. Panah menjadi
-Dependency, sedangkan garis tanpa panah menjadi Association pada profil UML.
+membutuhkan penggambaran ulang relasi. Nama relasi dan arah panah dari sumber dipertahankan sebagai kandidat. Relasi
+memerlukan konfirmasi makna dan validasi endpoint/metamodel sebelum penulisan.
+Panah mengusulkan Dependency, sedangkan garis tanpa panah mengusulkan Association pada UML.
 Profil ArchiMate memakai Association sebagai awal; tabel **Pemetaan tipe relasi**
 menyediakan Association, Serving, Access, Realization, Flow, Triggering, dan Assignment.
 Business Actor/Role ke Business Process memakai Assignment sebagai default;
@@ -208,7 +175,10 @@ Validasi kedua versi Python sebelum mengirim pembaruan lockfile.
 - `visio_reader.py`: pembaca Visio `.vsdx`.
 - `generic_mode.py`: pemetaan diagram umum ke elemen Sparx.
 - `model_types.py`: katalog UML/ArchiMate, usulan tipe, dan pemetaan relasi.
-- `ea_catalogue.py`: parsing metadata katalog, validasi binding GUID, resolver reuse JScript.
+- `ea_catalogue.py` / `catalogue_snapshot.py`: metadata, GUID, hierarchy dan scoped catalogue resolver.
+- `import_plan.py` / `semantic_rules.py`: shared source model, semantic dan relationship preflight.
+- `repository_profiles.py` / `repository_review.py`: profile dan tabel review Streamlit.
+- `runtime/`: metadata, repository identity, exporter dan governed JScript runtime.
 - `export_ea_catalogue.js`: ekspor metadata katalog dari Sparx EA tanpa mengubah model.
 - `trm_mode.py` dan `oda_reference.json`: pemodelan portofolio, ODA, dan teknologi.
 - `xlsx_to_csv.py`: konversi template Excel ke CSV.
@@ -221,6 +191,11 @@ Konverter BPMN dan Excel juga tersedia melalui CLI:
 .venv/bin/python drawio_to_sparx.py input.drawio output.js --horizontal
 .venv/bin/python xlsx_to_csv.py input.xlsx output.csv
 ```
+
+CLI BPMN tanpa metadata menghasilkan rencana VALIDATE_ONLY yang belum terikat;
+gunakan Streamlit untuk melengkapi profile, mapping dan persetujuan sebelum eksekusi.
+API Python `convert`/`convert_generic` menerima argumen profile, snapshot, keputusan
+elemen/relasi dan persetujuan eksplisit.
 
 ## Penggunaan internal
 

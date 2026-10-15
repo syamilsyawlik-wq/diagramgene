@@ -61,6 +61,7 @@ def load_pages(source):
             if model.tag != "mxGraphModel":
                 model = model.find(".//mxGraphModel")
         if model is not None:
+            model.set('_diagramgene_page_id', d.get('id') or d.get('name') or 'Page')
             pages.append((d.get("name") or "Page", model))
     return pages
 
@@ -665,11 +666,7 @@ function buildPage(parentPkg, page) {
     parentPkg.Packages.Refresh();
 
     var dia = pkg.Diagrams.AddNew(page.pool.name, "BPMN2.0::Business Process");
-    if (!dia.Update()) {
-        log("  Tipe diagram BPMN tidak tersedia, pakai Analysis");
-        dia = pkg.Diagrams.AddNew(page.pool.name, "Analysis");
-        mustUpdate(dia, "diagram");
-    }
+    mustUpdate(dia, "diagram BPMN: pastikan MDG BPMN 2.0 aktif");
     pkg.Diagrams.Refresh();
 
     var map = {};
@@ -873,7 +870,9 @@ def _raw_pages(source):
     return [(name, (lambda n=name, m=model: convert_page(n, m))) for name, model in load_pages(data)]
 
 
-def convert(source, orient="vertical", keep_layout=False, page_names=None):
+def convert(source, orient="vertical", keep_layout=False, page_names=None,
+            repository_profile=None, snapshot=None, element_decisions=None, relationship_decisions=None,
+            execution_mode="VALIDATE_ONLY", execute_approved=False):
     """Konversi file (draw.io / .vsdx) -> (teks JScript, data halaman, catatan).
     source: bytes atau path. page_names: subset nama halaman (None = semua)."""
     pages, notes = [], []
@@ -895,7 +894,14 @@ def convert(source, orient="vertical", keep_layout=False, page_names=None):
         pages.append(pg)
     if not pages:
         raise ValueError("Tidak ada halaman yang bisa dikonversi. " + " ".join(notes))
-    return to_jscript(pages), pages, notes
+    from import_plan import read_source, apply_layout, build_plan, generate_jscript
+    document = read_source(source, mode='bpmn')
+    if page_names is not None:
+        document['pages'] = [p for p in document['pages'] if p['name'] in page_names]
+    apply_layout(document, orient, keep_layout)
+    plan = build_plan(document, repository_profile, snapshot, element_decisions, relationship_decisions,
+                      execution_mode, execute_approved)
+    return generate_jscript(plan), pages, notes
 
 
 def list_pages(source):
@@ -914,8 +920,7 @@ def list_pages(source):
 
 
 def to_jscript(pages):
-    # json.dumps tanpa trailing comma & ASCII-escaped -> aman untuk JScript (ES3)
-    return JSCRIPT.replace("__DATA__", json.dumps(pages, indent=1, ensure_ascii=True))
+    raise ValueError('Gunakan convert(source, repository_profile=..., snapshot=...) agar seluruh identitas dan relasi melalui preflight. Scene legacy tidak memuat source identity yang cukup.')
 
 
 if __name__ == "__main__":

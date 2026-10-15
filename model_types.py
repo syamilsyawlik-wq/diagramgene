@@ -1,5 +1,6 @@
 """Tipe model yang dipilih pengguna; tidak bergantung pada bentuk renderer EA."""
 import re
+from semantic_rules import BPMN_TYPES, BPMN_RELATIONS
 
 UML_TYPES = ("Class", "Component", "Node", "Artifact", "Interface", "Actor", "Activity",
              "UseCase", "Decision", "Boundary", "Note")
@@ -22,6 +23,7 @@ def archimate(name):
 
 EA_TYPE_LABELS = {name: name for name in UML_TYPES}
 EA_TYPE_LABELS.update({archimate(name): "ArchiMate: " + label for name, label in ARCHIMATE_NAMES.items()})
+EA_TYPE_LABELS.update({value: 'BPMN: '+value.split('::')[1] for value in BPMN_TYPES.values()})
 EA_ELEMENT_TYPES = tuple(EA_TYPE_LABELS)
 EA_LABEL_TYPES = {label: name for name, label in EA_TYPE_LABELS.items()}
 
@@ -38,6 +40,7 @@ RELATION_TYPES = {
     "ArchiMate: Triggering": ("Dependency", archimate("Triggering")),
     "ArchiMate: Assignment": ("Association", archimate("Assignment")),
 }
+RELATION_TYPES.update(BPMN_RELATIONS)
 
 
 def default_relation_type(src_type, tgt_type, directed, profile):

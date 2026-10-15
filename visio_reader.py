@@ -432,5 +432,7 @@ def load_vsdx_generic(data):
         if content is None:
             raise ValueError(f"{name}: isi halaman Visio tidak ditemukan.")
         page_h = _num(_cells(page.find(V + "PageSheet")).get("PageHeight"), 8.5)
-        out.append((name, _generic_model(content, masters, page_h)))
+        model = _generic_model(content, masters, page_h)
+        model.set('_diagramgene_page_id', page.get('ID') or name)
+        out.append((name, model))
     return out

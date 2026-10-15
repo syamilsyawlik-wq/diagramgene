@@ -23,6 +23,33 @@ def name_key(value):
     return " ".join(str(value).split()).lower()
 
 
+def descendant_packages(snapshot, root):
+    """Catalogue scope includes descendants, never a same-named sibling OPCO."""
+    allowed = {root}
+    while True:
+        expanded = allowed | {p['guid'] for p in snapshot.get('packages', []) if p.get('parent_guid') in allowed}
+        if expanded == allowed: return allowed
+        allowed = expanded
+
+
+def type_matches(entry, ea_type):
+    if '::' in ea_type:
+        return ea_type in [s.strip() for s in entry.get('stereotype', '').split(',')]
+    return entry.get('base_type', entry.get('ea_type')) == ea_type and not entry.get('stereotype')
+
+
+def scoped_candidates(entries, node, scope, opco=''):
+    candidates = [e for e in entries if e.get('package_guid') in scope and type_matches(e, node['ea_type'])
+                  and (not opco or e.get('opco') == opco)
+                  and (not node.get('qualified_package_path') or e.get('package_path') == node['qualified_package_path'])]
+    if node.get('business_id'):
+        return [e for e in candidates if e.get('business_id') == node['business_id']], False
+    exact = [e for e in candidates if name_key(e['name']) == name_key(node['name'])]
+    if exact: return exact, False
+    # Aliases are suggestions only; choosing their explicit GUID confirms identity.
+    return [e for e in candidates if e.get('alias') and name_key(e['alias']) == name_key(node['name'])], True
+
+
 def normalise_catalogue(options):
     if not options:
         return None
@@ -41,6 +68,9 @@ def normalise_catalogue(options):
 def read_catalogue_csv(raw):
     """Read the metadata-only CSV produced by export_ea_catalogue.js."""
     text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
+    if text.lstrip().startswith('{'):
+        from catalogue_snapshot import read_snapshot
+        return read_snapshot(text)
     try:
         dialect = csv.Sniffer().sniff(text[:10000], delimiters=",;\t")
     except csv.Error:

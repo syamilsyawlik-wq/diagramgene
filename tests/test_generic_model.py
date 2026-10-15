@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import unittest
 
-from generic_mode import convert_generic, list_generic_pages
+from generic_mode import convert_generic, list_generic_pages, _legacy_convert_generic
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = (ROOT / "examples/arsitektur_entitas.drawio").read_bytes()
@@ -63,7 +63,9 @@ class GenericModelTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("node"), "Node.js diperlukan untuk uji eksekusi JScript dengan stub EA")
     def test_generated_jscript_connects_real_elements_in_ea_api(self):
-        js, _, _ = convert_generic(SOURCE, element_types={
+        # Historical core contract; governed public entry points have their own
+        # identity/approval/zero-write tests in test_repository_import.py.
+        js, _, _ = _legacy_convert_generic(SOURCE, element_types={
             "Arsitektur": {"crm": "Component", "server": "Node"}})
         result = subprocess.run(["node", str(ROOT / "tests/ea_model_stub.js")],
                                 input=js, text=True, capture_output=True, check=True)

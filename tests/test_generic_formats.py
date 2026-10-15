@@ -10,7 +10,7 @@ import zipfile
 import zlib
 
 from drawio_to_sparx import convert
-from generic_mode import convert_generic, list_generic_pages
+from generic_mode import convert_generic, list_generic_pages, _legacy_convert_generic
 from model_types import archimate
 from vsdx_fixture import make_vsdx
 
@@ -104,12 +104,14 @@ class GenericFormatTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which("node"), "Node.js diperlukan untuk uji JScript")
     def test_archimate_jscript_creates_typed_model_and_relations(self):
-        js, _, _ = convert_generic(DRAWIO, profile="archimate", relation_types={
+        # Historical MDG rendering core; public preflight has separate safety tests.
+        js, _, _ = _legacy_convert_generic(DRAWIO, profile="archimate", relation_types={
             "Arsitektur": {"service_data": "ArchiMate: Access"}})
         output = json.loads(subprocess.run(["node", str(ROOT / "tests/ea_model_stub.js")],
                             input=js, text=True, capture_output=True, check=True).stdout)
         elements = {e["Name"]: e for e in output["elements"]}
-        self.assertEqual(elements["CRM"]["Type"], archimate("ApplicationComponent"))
+        self.assertEqual(elements["CRM"]["Type"], "Component")
+        self.assertEqual(elements["CRM"]["StereotypeEx"], archimate("ApplicationComponent"))
         customer_id = elements["Data pelanggan"]["ElementID"]
         link = next(c for c in output["connectors"] if c["SupplierID"] == customer_id)
         self.assertEqual(link["StereotypeEx"], archimate("Access"))

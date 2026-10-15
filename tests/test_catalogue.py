@@ -8,7 +8,9 @@ import subprocess
 import unittest
 
 from ea_catalogue import catalogue_candidates, guid, normalise_catalogue, read_catalogue_csv
-from generic_mode import convert_generic
+# Preserve the historical generator-core regressions. Governed public behavior
+# and mandatory preflight are exercised separately in test_repository_import.py.
+from generic_mode import _legacy_convert_generic as convert_generic
 from model_types import archimate
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -27,3 +27,12 @@ __pycache__/
 # cache lokal
 .cache/
 *.pyc
+
+# repository profiles and company snapshots (never commit)
+.diagramgene/
+*.qea
+*.qeax
+*.eap
+*.eapx
+*.catalogue.json
+*.snapshot.json

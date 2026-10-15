@@ -22,6 +22,9 @@ from ea_catalogue import (DEFAULT_MANAGED_TYPES, catalogue_candidates, catalogue
 from trm_mode import convert_trm
 from xlsx_to_csv import xlsx_to_csv_bytes
 from preview import render_preview
+from repository_review import profile_controls, review_plan
+from catalogue_snapshot import read_snapshot
+from import_plan import preview_pages
 
 MAX_ATTEMPTS, LOCKOUT_SEC = 5, 60
 LAYOUTS = {
@@ -126,6 +129,7 @@ with st.sidebar:
         st.rerun()
 
 # --------------------------------------------------------------------------- UI
+repository_context = profile_controls()
 st.title("Import ke Sparx EA")
 st.write("Upload diagram dari draw.io atau Visio, atau CSV portofolio aplikasi. Hasilnya script JScript "
          "untuk membangun diagram dan model di Sparx EA.")
@@ -172,31 +176,35 @@ if mode == "generic":
                                Path(__file__).with_name("export_ea_catalogue.js").read_text(encoding="utf-8"),
                                file_name="export_ea_catalogue.js", mime="text/javascript")
             st.caption("Opsional: pilih root package katalog di EA, jalankan script ekspor, "
-                       "salin output CSV ke file UTF-8, lalu upload untuk melihat kandidat dan memilih GUID.")
-            catalogue_upload = st.file_uploader("Metadata katalog EA (CSV, opsional)", type=["csv"], key="catalogue_upload")
+                       "salin output JSON ke file UTF-8, lalu upload untuk melihat kandidat dan memilih GUID. CSV lama tetap bisa dibaca.")
+            catalogue_upload = st.file_uploader("Metadata katalog EA (CSV/JSON, opsional)", type=["csv", "json"], key="catalogue_upload")
             if catalogue_upload is not None:
                 try:
                     catalogue_raw = catalogue_upload.getvalue()
                     catalogue_digest = hashlib.sha256(catalogue_raw).hexdigest()
-                    catalogue_data = read_catalogue_csv(catalogue_raw)
-                    catalogue_names = catalogue_index(catalogue_data["elements"])
+                    catalogue_data = read_snapshot(catalogue_raw)
+                    catalogue_names = catalogue_index([e for e in catalogue_data['elements'] if e['ea_type'] in EA_TYPE_LABELS])
                     st.caption(f"{len(catalogue_data['elements'])} objek katalog dapat dipetakan; "
                                f"{catalogue_data['skipped']} tipe tidak didukung dilewati.")
-                except (ValueError, UnicodeError) as exc:
+                except (ValueError, KeyError, TypeError, UnicodeError) as exc:
                     catalogue_error = str(exc)
+            elif repository_context.get('snapshot'):
+                catalogue_data=repository_context['snapshot']
+                catalogue_names=catalogue_index([e for e in catalogue_data['elements'] if e['ea_type'] in EA_TYPE_LABELS])
+                catalogue_digest=hashlib.sha256(repr(catalogue_data).encode()).hexdigest()
+                st.caption('Menggunakan snapshot dari Target repository EA di sidebar.')
             catalogue_root = st.text_input("GUID root package katalog",
-                                          value=catalogue_data["package_guid"] if catalogue_data else "",
+                                          value=catalogue_data["package_guid"] if catalogue_data else repository_context['profile']['catalogue_root_guid'],
                                           key=f"catalogue_root_{catalogue_digest}",
                                           help="GUID package pada model EA tujuan; pencarian mencakup seluruh sub-package.")
             managed_types = st.multiselect("Tipe yang wajib memakai katalog",
                                            [t for t in EA_TYPE_LABELS if t not in ("Note", "Boundary")],
                                            default=list(DEFAULT_MANAGED_TYPES),
                                            format_func=lambda t: EA_TYPE_LABELS[t])
-            missing_policy = st.selectbox("Jika objek katalog belum ada",
-                                          ["Batalkan impor", "Buat master baru di katalog"])
+            st.caption('Tipe wajib katalog harus REUSE. Buat master katalog secara terpisah di EA lalu ekspor ulang. Elemen lokal baru memerlukan NEW dan persetujuan per baris.')
             try:
                 catalogue_options = normalise_catalogue({"package_guid": catalogue_root,
-                    "managed_types": managed_types, "on_missing": "error" if missing_policy == "Batalkan impor" else "create"})
+                    "managed_types": managed_types, "on_missing": "error"})
                 if catalogue_data and catalogue_options["package_guid"] != catalogue_data["package_guid"]:
                     catalogue_error = "GUID root berbeda dari metadata CSV. Ekspor katalog dari package tujuan yang benar."
             except ValueError as exc:
@@ -226,10 +234,14 @@ if mode == "trm":
                    f"{len(info['skipped_examples'])} baris contoh dibuang.")
         csv_stem = re.sub(r"[^\w\-]+", "_", Path(up.name).stem).strip("_") or "trm"
         st.download_button("Download CSV hasil konversi", raw, file_name=f"{csv_stem}.csv", mime="text/csv")
+    if repository_context['profile']['environment'] == 'production':
+        st.warning('TRM repository-aware integration adalah P1; generate/execute production diblokir.')
+        st.stop()
+    trm_approved = st.checkbox('Setujui eksekusi TRM lokal legacy (belum memakai shared relationship resolver)') if repository_context['execution'] == 'EXECUTE' else False
     if st.button("Buat script", type="primary"):
         with st.spinner("Membaca CSV dan menyusun model TRM..."):
             try:
-                js, model, stats, warns = convert_trm(raw, root_name.strip() or "TRM - Technology Reference Model")
+                js, model, stats, warns = convert_trm(raw, root_name.strip() or "TRM - Technology Reference Model", repository_profile=repository_context["profile"], execution_mode=repository_context["execution"], execute_approved=trm_approved)
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Konversi gagal ({type(exc).__name__}: {exc}).")
                 st.stop()
@@ -424,34 +436,55 @@ if mode == "generic" and chosen:
         for row in edited_relations:
             relation_types.setdefault(row["Halaman"], {})[row["ID"]] = row["Tipe relasi"]
 
+try:
+    governed_plan, governed_js = review_plan(data, mode, repository_context, chosen,
+        default_type=generic_default_type, semantic_profile=generic_profile,
+        element_types=element_types, relation_types=relation_types, catalogue=catalogue_options,
+        catalogue_data=catalogue_data, orient=orient, keep_layout=keep)
+except (ValueError, KeyError, TypeError) as exc:
+    st.error(f"Rencana impor tidak valid: {exc}")
+    st.stop()
+
 mapping_key = tuple((page, tuple(sorted(types.items()))) for page, types in sorted(element_types.items()))
 relations_key = tuple((page, tuple(sorted(types.items()))) for page, types in sorted(relation_types.items()))
 conversion_key = (digest, tuple(chosen), layout_label, mode, generic_default_type, generic_profile, mapping_key, relations_key,
-                  repr(catalogue_options), catalogue_error)
+                  repr(catalogue_options), catalogue_error, governed_plan["plan_digest"], governed_plan["approval_digest"])
 
-if st.button("Buat script", type="primary", disabled=not chosen or bool(catalogue_error)):
+if st.button("Buat script", type="primary", disabled=not chosen or bool(catalogue_error) or (governed_plan["mode"] == "EXECUTE" and (not governed_plan["can_execute"] or not governed_plan["approval_digest"]))):
     with st.spinner("Membaca diagram dan menyusun layout..."):
         try:
+            js = governed_js
             if mode == "generic":
-                js, pages, notes = convert_generic(data, page_names=chosen,
-                                                  default_type=generic_default_type, element_types=element_types,
-                                                  profile=generic_profile, relation_types=relation_types, catalogue=catalogue_options)
+                pages, notes = load_generic_pages(data, page_names=chosen,
+                    default_type=generic_default_type, element_types=element_types,
+                    profile=generic_profile, relation_types=relation_types, catalogue=catalogue_options)
+                # The preview must describe the final review, including edits in
+                # the shared semantic/relationship tables.
+                for pg in pages:
+                    page_id=pg['source_page_id']
+                    nodes={n['source_element_id']:n for n in governed_plan['nodes'] if n['source_page_id']==page_id}
+                    relations={r['source_relationship_id']:r for r in governed_plan['relationships'] if r['id'].startswith(page_id+'/')}
+                    for item in pg['items']: item['ea_type']=nodes[item['key']]['ea_type']
+                    for link in pg['links']:
+                        resolved=relations[link['key']]
+                        link.update(relation_type=resolved['relationship_type'],ea_type=resolved['base_type'],
+                                    stereotype=resolved['stereotype'],name=resolved['name'],direction=resolved['direction'])
             else:
-                js, pages, notes = convert(data, orient=orient, keep_layout=keep, page_names=chosen)
+                pages, notes = preview_pages(governed_plan), []
             previews = [render_preview(pg) for pg in pages]
         except Exception as exc:  # noqa: BLE001
             st.error(f"Konversi gagal ({type(exc).__name__}: {exc}).")
             st.stop()
     st.session_state.result = {"key": conversion_key,
                                "js": js, "pages": pages, "previews": previews, "notes": notes,
-                               "name": uploaded.name}
+                               "name": uploaded.name, "import_plan": governed_plan}
 
 result = st.session_state.get("result")
 if not result or result["key"] != conversion_key:
     st.stop()
 
 # --------------------------------------------------------------------------- output
-st.success(f"Script siap: {len(result['pages'])} diagram.")
+st.success(f"Script {governed_plan['mode']} siap untuk {len(result['pages'])} diagram. VALIDATE_ONLY tidak mengimpor model.")
 for note in result.get("notes", []):
     st.warning(note)
 stem = re.sub(r"[^\w\-]+", "_", Path(result["name"]).stem).strip("_") or "diagram"

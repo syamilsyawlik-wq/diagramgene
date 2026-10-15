@@ -3,6 +3,7 @@ import os
 import io
 from pathlib import Path
 import secrets
+import shutil
 import unittest
 from unittest.mock import patch
 
@@ -79,7 +80,7 @@ class AppTests(unittest.TestCase):
                 else:
                     at.radio[0].set_value(label).run()
                 self.assert_no_exception(at)
-                self.assertEqual(len(at.get("file_uploader")), 1)
+                self.assertEqual(len(at.get("file_uploader")), 2)  # Diagram + repository snapshot.
         at.session_state["result"] = {"test": "discard on logout"}
         at.sidebar.button[0].click().run()
         self.assert_no_exception(at)
@@ -141,7 +142,7 @@ class AppTests(unittest.TestCase):
         with patch("streamlit.file_uploader", return_value=upload):
             self.enter_generic(at)
             self.assert_no_exception(at)
-            self.assertEqual(len(at.get("data_editor")) + len(at.dataframe), 2)
+            self.assertEqual(len(at.get("data_editor")) + len(at.dataframe), 6)  # Existing mappings + governed review/dry-run.
             next(b for b in at.button if b.label == "Buat script").click().run()
             self.assert_no_exception(at)
             self.assertEqual(len(at.session_state["result"]["pages"][0]["links"]), 5)
@@ -194,6 +195,62 @@ class AppTests(unittest.TestCase):
             self.assertEqual(len(result["pages"]), 1)
             self.assertEqual(len(result["pages"][0]["links"]), 1)
 
+    @unittest.skipUnless(shutil.which('node'),'Node.js required for synthetic snapshot fixture')
+    def test_v2_snapshot_profile_and_production_default_validate_only(self):
+        import json
+        from test_repository_import import export, fixture_base
+        snapshot=io.BytesIO(json.dumps(export(fixture_base())).encode());snapshot.name='synthetic.catalogue.json'
+        diagram=io.BytesIO((ROOT/'examples/manager_dan_proses.drawio').read_bytes());diagram.name='manager.drawio'
+        at=self.app(self.password);self.login(at,self.password)
+        def uploads(*args,**kwargs):
+            if kwargs.get('key')=='repository_snapshot': return snapshot
+            if kwargs.get('key')=='catalogue_upload': return None
+            return diagram
+        with patch('streamlit.file_uploader',side_effect=uploads):
+            at.radio[0].set_value('Diagram umum → entitas & relasi').run()
+            self.assert_no_exception(at)
+            next(b for b in at.button if b.label=='Buat script').click().run()
+            self.assert_no_exception(at)
+            plan=at.session_state['result']['import_plan']
+            self.assertEqual(plan['profile']['expected_identity']['kind'],'local')
+            self.assertEqual(plan['profile']['catalogue_root_guid'],CATALOGUE)
+            self.assertEqual(plan['mode'],'VALIDATE_ONLY')
+            next(s for s in at.selectbox if s.label=='Repository profile').set_value('Holding Production').run()
+            self.assert_no_exception(at)
+            self.assertEqual(next(r for r in at.radio if r.label=='Mode runtime JScript').value,'VALIDATE_ONLY')
+            self.assertFalse(next(c for c in at.checkbox if c.label.startswith('Izinkan elemen lokal baru')).value)
+
+    @unittest.skipUnless(shutil.which('node'),'Node.js required for strict runtime fixture')
+    def test_review_mapping_and_explicit_execute_produce_working_governed_script(self):
+        import json
+        from test_repository_import import export, fixture_base, run_js, ACTOR, PROCESS, CONNECTOR
+        fixture=fixture_base()
+        snapshot=io.BytesIO(json.dumps(export(fixture)).encode());snapshot.name='synthetic.catalogue.json'
+        diagram=io.BytesIO((ROOT/'examples/manager_dan_proses.drawio').read_bytes());diagram.name='manager.drawio'
+        def uploads(*args,**kwargs):
+            return snapshot if kwargs.get('key')=='repository_snapshot' else None if kwargs.get('key')=='catalogue_upload' else diagram
+        def edit(rows,**kwargs):
+            if rows and 'Source Element' in rows[0]:
+                return [{**row,'Action':'REUSE','Master GUID':ACTOR if row['Source Element']=='Manager' else PROCESS} for row in rows]
+            if rows and 'Confirm semantics' in rows[0]:
+                return [{**row,'Confirm semantics':True,'Existing ConnectorGUID':CONNECTOR} for row in rows]
+            return rows
+        at=self.app(self.password);self.login(at,self.password)
+        with patch('streamlit.file_uploader',side_effect=uploads),patch('streamlit.data_editor',side_effect=edit):
+            at.radio[0].set_value('Diagram umum → entitas & relasi').run()
+            next(r for r in at.radio if r.label=='Mode runtime JScript').set_value('EXECUTE').run()
+            self.assert_no_exception(at)
+            self.assertTrue(next(b for b in at.button if b.label=='Buat script').disabled)
+            next(c for c in at.checkbox if c.label.startswith('Saya menyetujui EXECUTE')).check().run()
+            self.assert_no_exception(at)
+            next(b for b in at.button if b.label=='Buat script').click().run()
+            self.assert_no_exception(at)
+            result=at.session_state['result']
+            self.assertTrue(result['import_plan']['can_execute'])
+            out=run_js(result['js'],fixture)
+            self.assertIsNone(out['error'],out['logs'])
+            self.assertEqual(len(out['connectors']),1)
+
     def test_catalogue_default_requires_valid_package_before_generation(self):
         at = self.app(self.password)
         self.login(at, self.password)
@@ -209,7 +266,10 @@ class AppTests(unittest.TestCase):
             self.assertFalse(next(b for b in at.button if b.label == "Buat script").disabled)
             next(b for b in at.button if b.label == "Buat script").click().run()
             self.assert_no_exception(at)
-            self.assertIn('"package_guid": "' + CATALOGUE, at.session_state["result"]["js"])
+            result=at.session_state['result']
+            self.assertEqual(result['import_plan']['profile']['catalogue_root_guid'],CATALOGUE)
+            self.assertEqual(result['import_plan']['mode'],'VALIDATE_ONLY')
+            self.assertFalse(result['import_plan']['can_execute'])  # A root GUID alone is insufficient authorization.
 
     def test_catalogue_metadata_turns_plain_manager_note_into_reference_to_actor(self):
         at = self.app(self.password)

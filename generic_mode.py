@@ -67,6 +67,7 @@ def _shape_kind(style):
 
 def convert_generic_page(name, model):
     cells = {}
+    source_metadata = {}
     for c in model.iter("mxCell"):
         if c.get("id"):
             cells[c.get("id")] = c
@@ -78,6 +79,7 @@ def convert_generic_page(name, model):
                 if not inner.get("value"):
                     inner.set("value", obj.get("label", ""))
                 cells[obj.get("id")] = inner
+                source_metadata[obj.get('id')] = {key:obj.get(key) for key in ('BusinessID','DG_BusinessID','OPCO','DG_OPCO','MasterGUID') if obj.get(key)}
 
     absg = {}
 
@@ -148,11 +150,12 @@ def convert_generic_page(name, model):
             cid = cells[cid].get("parent")
         return None
 
-    links, loose = [], 0
+    links, loose, unresolved = [], 0, []
     for cid, c in cells.items():
         if c.get("edge") != "1":
             continue
         ends = {"source": to_item(c.get("source")), "target": to_item(c.get("target"))}
+        endpoint_basis = 'explicit' if all(ends.values()) else 'geometry candidate'
         g = c.find("mxGeometry")
         ox, oy, _, _ = geom(c.get("parent"))
         for end in ("source", "target"):
@@ -169,6 +172,8 @@ def convert_generic_page(name, model):
         src, tgt = ends["source"], ends["target"]
         if not src or not tgt:
             loose += 1
+            unresolved.append({'id':cid,'source':c.get('source'),'target':c.get('target'),
+                               'name':multiline(c.get('value'))})
             continue
         _, kv = parse_style(c.get("style"))
         start_arrow = kv.get("startarrow", "none") not in ("none", "")
@@ -177,6 +182,8 @@ def convert_generic_page(name, model):
             src, tgt = tgt, src
         direction = "Bi-Directional" if start_arrow and end_arrow else "Source -> Destination" if start_arrow or end_arrow else "Unspecified"
         links.append({"key": cid, "src": src, "tgt": tgt, "directed": start_arrow or end_arrow,
+                      "source_style": c.get("style", ""),
+                      "endpoint_basis": endpoint_basis,
                       "direction": direction,
                       "name": multiline(c.get("value")).replace("\n", " ") or labels.get(cid, "")})
     if loose:
@@ -193,7 +200,9 @@ def convert_generic_page(name, model):
         x, y, w, h = it["g"]
         l, t = round(x - x0 + MARGIN), round(y - y0 + MARGIN)
         out.append({"key": it["key"], "kind": it["kind"], "text": it["text"],
+                    "source_parent": cells[it["key"]].get("parent"),
                     "source_style": cells[it["key"]].get("style", ""),
+                    "source_metadata": source_metadata.get(it['key'],{}),
                     "context": [other["text"] for other in sorted(items.values(), key=lambda o: o["g"][2] * o["g"][3])
                                 if other["kind"] == "container" and other["key"] != it["key"]
                                 and other["g"][0] <= x and other["g"][1] <= y
@@ -202,8 +211,8 @@ def convert_generic_page(name, model):
                     "l": l, "t": t, "r": l + round(w), "b": t + round(h),
                     "seq": (len(order) - rank) if it["kind"] == "container" else 1})
 
-    return {"name": name, "mode": "generic", "title": name, "items": out, "links": links,
-            "skipped": skipped,
+    return {"name": name, "source_page_id": model.get("_diagramgene_page_id", ""), "mode": "generic", "title": name, "items": out, "links": links,
+            "skipped": skipped, "unresolved_relationships": unresolved,
             # kolom di bawah dipakai app untuk ringkasan
             "pool": {"name": name}, "nodes": [], "lanes": [], "flows": []}
 
@@ -270,7 +279,7 @@ def load_generic_pages(source, page_names=None, default_type=None, element_types
     return pages, notes
 
 
-def convert_generic(source, page_names=None, default_type=None, element_types=None,
+def _legacy_convert_generic(source, page_names=None, default_type=None, element_types=None,
                     profile="uml", relation_types=None, catalogue=None):
     """(JScript, halaman, catatan); perubahan tipe mempertahankan ID dan relasi."""
     catalogue = normalise_catalogue(catalogue)
@@ -278,6 +287,37 @@ def convert_generic(source, page_names=None, default_type=None, element_types=No
     script = JSCRIPT_GENERIC.replace("__CATALOGUE_RUNTIME__", JS_CATALOGUE)
     script = script.replace("__CATALOGUE__", json.dumps(catalogue, ensure_ascii=True))
     return script.replace("__DATA__", json.dumps(pages, indent=1, ensure_ascii=True)), pages, notes
+
+
+def convert_generic(source, page_names=None, default_type=None, element_types=None,
+                    profile="uml", relation_types=None, catalogue=None, repository_profile=None,
+                    snapshot=None, element_decisions=None, relationship_decisions=None,
+                    execution_mode="VALIDATE_ONLY", execute_approved=False):
+    """Public entry point: all model writes go through the governed runtime."""
+    from import_plan import read_source, build_plan, generate_jscript
+    pages, notes = load_generic_pages(source, page_names, default_type, element_types, profile, relation_types, catalogue)
+    document = read_source(source, profile=profile, default_type=default_type)
+    document['required_master_types']=(catalogue or {}).get('managed_types',[])
+    if page_names is not None:
+        document['pages'] = [p for p in document['pages'] if p['name'] in page_names]
+    choices = dict(element_decisions or {})
+    relationships = dict(relationship_decisions or {})
+    repository_profile = dict(repository_profile or {})
+    if catalogue and not repository_profile.get('catalogue_root_guid'):
+        repository_profile['catalogue_root_guid'] = catalogue['package_guid']
+    for page in document['pages']:
+        for node in page['nodes']:
+            selected = (element_types or {}).get(page['name'], {}).get(node['source_element_id'])
+            if selected: node['ea_type'] = selected
+            bound = (catalogue or {}).get('bindings', {}).get(page['name'], {}).get(node['source_element_id'])
+            if bound and node['id'] not in choices:
+                choices[node['id']] = {'action':'REUSE','master_guid':bound}
+        for relation in page['relationships']:
+            selected = (relation_types or {}).get(page['name'], {}).get(relation['source_relationship_id'])
+            if selected: relation['relationship_type'] = selected
+    plan = build_plan(document, repository_profile, snapshot, choices, relationships,
+                      execution_mode, execute_approved)
+    return generate_jscript(plan), pages, notes
 
 
 JSCRIPT_GENERIC = r"""// Generated by generic_mode.py  --  Bahasa: JScript
