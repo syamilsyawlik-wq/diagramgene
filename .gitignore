@@ -1,0 +1,29 @@
+# rahasia
+.streamlit/secrets.toml
+
+# file diagram & hasil konversi (dokumen internal)
+*.vsd
+*.vsdx
+*.drawio
+*.xml
+*.pdf
+*.png
+*_sparx.js
+*.csv
+*.txt
+!requirements.txt
+
+# tool konversi Visio lokal
+convertvisio/
+
+# environment
+.venv/
+__pycache__/
+
+# Contoh sintetis yang boleh dibagikan dan dipakai untuk pengujian
+!examples/*.drawio
+!examples/*.csv
+
+# cache lokal
+.cache/
+*.pyc

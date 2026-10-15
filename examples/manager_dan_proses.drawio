@@ -1,0 +1,26 @@
+<mxfile>
+  <diagram name="Persetujuan Anggaran"><mxGraphModel><root>
+    <mxCell id="0"/><mxCell id="1" parent="0"/>
+    <mxCell id="manager" value="Manager" style="shape=umlActor;" vertex="1" parent="1">
+      <mxGeometry x="20" y="70" width="60" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="process" value="Persetujuan anggaran" style="shape=umlActivity;" vertex="1" parent="1">
+      <mxGeometry x="220" y="80" width="170" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="responsibility" value="bertanggung jawab" edge="1" source="manager" target="process" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root></mxGraphModel></diagram>
+  <diagram name="Persetujuan Pengadaan"><mxGraphModel><root>
+    <mxCell id="0"/><mxCell id="1" parent="0"/>
+    <mxCell id="manager" value="Manager" style="shape=umlActor;" vertex="1" parent="1">
+      <mxGeometry x="20" y="70" width="60" height="100" as="geometry"/>
+    </mxCell>
+    <mxCell id="process" value="Persetujuan pengadaan" style="shape=umlActivity;" vertex="1" parent="1">
+      <mxGeometry x="220" y="80" width="170" height="80" as="geometry"/>
+    </mxCell>
+    <mxCell id="responsibility" value="bertanggung jawab" edge="1" source="manager" target="process" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
+    </mxCell>
+  </root></mxGraphModel></diagram>
+</mxfile>

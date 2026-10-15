@@ -1,0 +1,374 @@
+[
+ {
+  "name": "A. Engagement Management",
+  "notes": "Titik interaksi perusahaan dengan ekosistemnya (multi/omnichannel). Menangani antarmuka, orkestrasi journey pengguna, personalisasi & agregasi konten, autentikasi/otorisasi, serta eksposur API ke mitra, dengan dukungan data dari blok lain.",
+  "components": [
+   {
+    "name": "A1. Channel Management",
+    "notes": "Mengelola berbagai saluran digital (web portal, aplikasi mobile, kios) sebagai titik interaksi pelanggan."
+   },
+   {
+    "name": "A2. Content Management",
+    "notes": "Mengelola konten digital yang ditampilkan di saluran: artikel, banner, halaman produk, dan notifikasi."
+   },
+   {
+    "name": "A3. Experience Mgt Strategy & Planning",
+    "notes": "Merencanakan dan mengatur strategi pengalaman pelanggan lintas saluran secara holistik."
+   },
+   {
+    "name": "A4. Navigation Management",
+    "notes": "Mengelola struktur navigasi, menu, dan alur perpindahan halaman pada saluran digital."
+   }
+  ]
+ },
+ {
+  "name": "B. Party Management",
+  "notes": "Mengelola entitas pihak (individu & organisasi) dan informasi relasinya sepanjang siklus hidup, termasuk peran, hak akses, lead & opportunity, agreement/kontrak, serta data kontak/vendor untuk mendukung proses komersial.",
+  "components": [
+   {
+    "name": "B1. Agreement Management",
+    "notes": "Mengelola pembuatan, pengelolaan, dan terminasi perjanjian/kontrak layanan dengan pelanggan atau mitra."
+   },
+   {
+    "name": "B2. Bill Generation Management",
+    "notes": "Mengelola proses pembuatan tagihan: kalkulasi, format, dan distribusi tagihan ke pelanggan."
+   },
+   {
+    "name": "B3. Billing Account Management",
+    "notes": "Mengelola akun penagihan pelanggan: saldo, metode bayar, dan preferensi tagihan."
+   },
+   {
+    "name": "B4. Billing Inquiries Management",
+    "notes": "Menangani pertanyaan, klarifikasi, dan sengketa terkait tagihan dari pelanggan."
+   },
+   {
+    "name": "B5. Campaign Management",
+    "notes": "Merencanakan, menjalankan, dan mengukur efektivitas kampanye pemasaran dan promosi."
+   },
+   {
+    "name": "B6. Debt Collection Management",
+    "notes": "Mengelola proses penagihan piutang dari pelanggan yang menunggak pembayaran."
+   },
+   {
+    "name": "B7. Digital Identity Management",
+    "notes": "Mengelola identitas digital pelanggan/pengguna: akun, kredensial, dan verifikasi identitas."
+   },
+   {
+    "name": "B8. Document Management",
+    "notes": "Mengelola dokumen yang terkait dengan pihak: kontrak, KTP, NPWP, dan berkas pendukung lainnya."
+   },
+   {
+    "name": "B9. Finance Accounting Management",
+    "notes": "Mengelola akuntansi dan pelaporan keuangan yang berhubungan langsung dengan transaksi pihak."
+   },
+   {
+    "name": "B10. Lead & Opportunity Management",
+    "notes": "Mengelola prospek penjualan (lead) dan peluang bisnis (opportunity) hingga closing."
+   },
+   {
+    "name": "B11. Marketing Communications",
+    "notes": "Mengelola komunikasi pemasaran ke pelanggan: email, SMS, push notification, dan kampanye digital."
+   },
+   {
+    "name": "B12. Party Interaction Management",
+    "notes": "Merekam dan mengelola semua interaksi antara perusahaan dan pihak: telepon, chat, email, kunjungan."
+   },
+   {
+    "name": "B13. Party Management",
+    "notes": "Mengelola data inti entitas pihak: pelanggan, mitra, individu, dan organisasi beserta atributnya."
+   },
+   {
+    "name": "B14. Party Privacy Management",
+    "notes": "Mengelola persetujuan privasi data (consent), preferensi komunikasi, dan hak-hak GDPR/PDPA."
+   },
+   {
+    "name": "B15. Party Problem Management",
+    "notes": "Menangani keluhan, laporan masalah, dan permintaan penyelesaian dari pihak/pelanggan."
+   },
+   {
+    "name": "B16. Payment Management",
+    "notes": "Mengelola metode, transaksi, dan rekonsiliasi pembayaran dari/ke pihak."
+   }
+  ]
+ },
+ {
+  "name": "C. Core Commerce Management",
+  "notes": "Mengelola proses komersial inti: katalog produk/penawaran, capture & validasi pesanan, orkestrasi pengiriman pesanan, inventaris produk, dan penagihan. Berinteraksi dengan Production untuk memanfaatkan kapabilitas layanan.",
+  "components": [
+   {
+    "name": "C1. Bill Calculation",
+    "notes": "Menghitung tagihan akhir pelanggan berdasarkan pemakaian, tarif, diskon, dan pajak yang berlaku."
+   },
+   {
+    "name": "C2. Commission Management",
+    "notes": "Mengelola skema komisi, perhitungan, dan pembayaran komisi untuk agen dan mitra penjualan."
+   },
+   {
+    "name": "C3. Product Assurance Management",
+    "notes": "Memastikan produk yang dijual memenuhi standar kualitas dan SLA yang dijanjikan ke pelanggan."
+   },
+   {
+    "name": "C4. Product Catalog Management",
+    "notes": "Mendefinisikan dan mengelola katalog produk/layanan resmi yang bisa dijual ke pelanggan."
+   },
+   {
+    "name": "C5. Product Configurator",
+    "notes": "Membantu konfigurasi produk/layanan yang dapat dikustomisasi sesuai kebutuhan pelanggan."
+   },
+   {
+    "name": "C6. Product Inventory",
+    "notes": "Mengelola stok dan ketersediaan produk/layanan yang siap dijual atau dialokasikan."
+   },
+   {
+    "name": "C7. Product Order Capture & Management",
+    "notes": "Menerima, memvalidasi, dan melacak pesanan produk/layanan dari pelanggan hingga siap dieksekusi."
+   },
+   {
+    "name": "C8. Product Order Delivery Orchestration & Management",
+    "notes": "Mengorkestrasi pengiriman (fulfilment) pesanan ke sistem downstream: provisioning, billing, dan lainnya."
+   },
+   {
+    "name": "C9. Product Recommendation Management",
+    "notes": "Menganalisis perilaku pelanggan dan memberikan rekomendasi produk/layanan yang relevan."
+   },
+   {
+    "name": "C10. Product Test Management",
+    "notes": "Mengelola pengujian produk/layanan baru sebelum diluncurkan ke pasar (UAT, beta testing)."
+   },
+   {
+    "name": "C11. Product Usage Management",
+    "notes": "Memantau dan mengelola pemakaian produk/layanan oleh pelanggan selama masa berlangganan."
+   },
+   {
+    "name": "C12. Product / Sales Performance Management",
+    "notes": "Menganalisis kinerja penjualan produk: revenue, volume, market share, dan tren."
+   },
+   {
+    "name": "C13. Purchase Management",
+    "notes": "Mengelola proses pembelian produk/layanan dari pihak ketiga untuk mendukung operasional."
+   }
+  ]
+ },
+ {
+  "name": "D. Production",
+  "notes": "Bertanggung jawab atas definisi, delivery, dan lifecycle management Customer Facing Services (CFS) & Resource Facing Services (RFS), termasuk deployment infrastruktur, usage/balance, assurance, problem & performance management. /  / CFS — layanan yang berinteraksi langsung dengan pelanggan/pengguna akhir. Ini adalah \"apa\" yang dilihat dan dipilih pelanggan, didefinisikan lewat Customer Facing Service Specifications (CFSS) di katalog layanan. /  / ‚Ä¢ RFS — layanan/komponen teknis di belakang layar untuk mengelola sumber daya & infrastruktur yang diperlukan agar CFS bisa disampaikan. RFS tidak dilihat pelanggan, didefinisikan lewat Resource Facing Service Specifications (RFSS).",
+  "components": [
+   {
+    "name": "D1. Anomaly Management",
+    "notes": "Mendeteksi, menganalisis, dan mengelola anomali performa jaringan/layanan di luar pola normal."
+   },
+   {
+    "name": "D2. Fault Management",
+    "notes": "Menerima, melacak, dan menyelesaikan laporan gangguan/kerusakan pada jaringan dan layanan."
+   },
+   {
+    "name": "D3. IT and Network Infrastructure Management",
+    "notes": "Mengelola inventaris, konfigurasi, dan kapasitas infrastruktur IT dan jaringan secara terpusat."
+   },
+   {
+    "name": "D4. Location Management",
+    "notes": "Mengelola data lokasi geografis aset jaringan, coverage area, dan informasi geospasial."
+   },
+   {
+    "name": "D5. Resource Capability Delivery",
+    "notes": "Mengelola dan mengekspos kapabilitas sumber daya jaringan yang bisa digunakan oleh layanan."
+   },
+   {
+    "name": "D6. Resource Catalog Management",
+    "notes": "Mendefinisikan dan mengelola katalog sumber daya teknis (perangkat, NE, kapasitas) yang tersedia."
+   },
+   {
+    "name": "D7. Resource Configuration and Activation Management",
+    "notes": "Mengkonfigurasi parameter teknis dan mengaktifkan sumber daya jaringan/perangkat."
+   },
+   {
+    "name": "D8. Resource Discovery and Reconciliation",
+    "notes": "Menemukan perangkat/aset jaringan secara otomatis dan merekonsiliasi dengan data di sistem."
+   },
+   {
+    "name": "D9. Resource Inventory",
+    "notes": "Menyimpan dan mengelola inventaris semua sumber daya jaringan dan infrastruktur yang dimiliki."
+   },
+   {
+    "name": "D10. Resource Order Management",
+    "notes": "Mengelola permintaan dan pemenuhan order sumber daya teknis yang dibutuhkan untuk mengaktifkan layanan."
+   },
+   {
+    "name": "D11. Resource Performance Management",
+    "notes": "Memantau dan mengelola data performa sumber daya jaringan: utilisasi, throughput, dan kapasitas."
+   },
+   {
+    "name": "D12. Resource Test Management",
+    "notes": "Mengelola pengujian fungsional sumber daya jaringan untuk memastikan beroperasi normal."
+   },
+   {
+    "name": "D13. Resource Usage Management",
+    "notes": "Mengumpulkan dan mengelola data pemakaian sumber daya jaringan (CDR, counters, metrics)."
+   },
+   {
+    "name": "D14. Service Balance Management",
+    "notes": "Mengelola kuota, saldo, dan batas pemakaian layanan yang dialokasikan ke pelanggan."
+   },
+   {
+    "name": "D15. Service Catalog Management",
+    "notes": "Mendefinisikan dan mengelola katalog layanan teknis yang bisa diaktifkan untuk pelanggan."
+   },
+   {
+    "name": "D16. Service Inventory",
+    "notes": "Menyimpan dan mengelola data inventaris instansi layanan pelanggan yang sedang aktif."
+   },
+   {
+    "name": "D17. Service Order Management",
+    "notes": "Menerima dan mengelola permintaan aktivasi/deaktivasi/modifikasi layanan dari sistem upstream."
+   },
+   {
+    "name": "D18. Service Performance Management",
+    "notes": "Mengumpulkan, menganalisis, dan melaporkan data performa layanan yang sedang aktif."
+   },
+   {
+    "name": "D19. Service Qualification Management",
+    "notes": "Menentukan apakah suatu lokasi atau pelanggan memenuhi syarat teknis untuk menerima layanan tertentu."
+   },
+   {
+    "name": "D20. Service Quality Management",
+    "notes": "Mengelola dan memastikan kualitas layanan memenuhi SLA yang disepakati dengan pelanggan."
+   },
+   {
+    "name": "D21. Service Test Management",
+    "notes": "Mengelola pengujian layanan sebelum diaktifkan ke pelanggan atau setelah perubahan konfigurasi."
+   },
+   {
+    "name": "D22. Service Usage Management",
+    "notes": "Memantau dan mencatat data pemakaian layanan oleh pelanggan untuk keperluan billing dan analitik."
+   },
+   {
+    "name": "D23. Strategic Resource Planning",
+    "notes": "Merencanakan kebutuhan kapasitas sumber daya jaringan jangka menengah-panjang secara strategis."
+   },
+   {
+    "name": "D24. Supply Chain Management",
+    "notes": "Mengelola rantai pasok perangkat jaringan: pengadaan, pengiriman, dan manajemen vendor material."
+   },
+   {
+    "name": "D25. Work Order Management",
+    "notes": "Membuat dan mengelola perintah kerja teknis untuk aktivitas instalasi, perbaikan, atau pemeliharaan."
+   },
+   {
+    "name": "D26. Workforce Management",
+    "notes": "Mengelola penjadwalan, penugasan, dan pelacakan teknisi/tenaga kerja lapangan."
+   }
+  ]
+ },
+ {
+  "name": "E. Decoupling and Integration",
+  "notes": "Mengelola pemisahan dan integrasi batas-fungsi ODA agar layanan dapat dikombinasikan secara fleksibel tanpa terkekang pola proses berlapis. Menyediakan katalog API ter-normalisasi dan routing pesan untuk mediasi API antar komponen",
+  "components": [
+   {
+    "name": "E1. API Management",
+    "notes": "Mengelola, mengamankan, mempublikasikan, dan memantau API yang digunakan antar sistem internal dan eksternal."
+   },
+   {
+    "name": "E2. Enterprise Integration",
+    "notes": "Mengintegrasikan sistem enterprise menggunakan ESB, middleware, atau platform iPaaS."
+   },
+   {
+    "name": "E3. Event Management",
+    "notes": "Mengelola aliran event dan pesan antar komponen sistem secara asinkron dan real-time."
+   }
+  ]
+ },
+ {
+  "name": "F. Enterprise",
+  "notes": "Mengelola fungsi IT korporat secara end-to-end meliputi sistem ERP, HR, keuangan, dan GRC — mulai dari definisi kebijakan, integrasi sistem, hingga pengelolaan data dan kepatuhan regulasi di seluruh domain ODA",
+  "components": [
+   {
+    "name": "F1. Financial Management",
+    "notes": "Mengelola akuntansi, anggaran, laporan keuangan konsolidasi, dan administrasi keuangan perusahaan."
+   },
+   {
+    "name": "F2. Revenue Assurance Management",
+    "notes": "Memastikan tidak ada kebocoran pendapatan dengan merekonsiliasi aliran data dari network ke billing."
+   },
+   {
+    "name": "F3. HR Management",
+    "notes": "Mengelola seluruh proses SDM: rekrutmen, penggajian, manajemen kinerja, pelatihan, dan absensi."
+   },
+   {
+    "name": "F4. Regulatory & Compliance Management",
+    "notes": "Memastikan kepatuhan terhadap regulasi eksternal dan kebijakan internal melalui audit dan monitoring."
+   },
+   {
+    "name": "F5. Supply Chain Management",
+    "notes": "Mengelola pengadaan barang/jasa dan rantai pasok non-jaringan untuk kebutuhan korporat."
+   },
+   {
+    "name": "F6. Asset Management",
+    "notes": "Mengelola siklus hidup aset fisik dan digital perusahaan: pengadaan, pemeliharaan, hingga penghapusan."
+   },
+   {
+    "name": "F7. Data Management",
+    "notes": "Mengelola tata kelola data korporat: kualitas data, metadata, data governance, dan master data."
+   },
+   {
+    "name": "F8. Corporate Function",
+    "notes": "Mengelola fungsi korporat umum: legal, kehumasan, fasilitas gedung, dan layanan umum internal."
+   },
+   {
+    "name": "F9. Knowledge Management",
+    "notes": "Mengelola aset pengetahuan perusahaan: prosedur, SOP, lesson learned, dan basis pengetahuan."
+   }
+  ]
+ },
+ {
+  "name": "G. Security",
+  "notes": "Mengimplementasikan keamanan IT secara menyeluruh mencakup IAM, SIEM, monitoring konteks, manajemen insiden, dan penegakan kebijakan keamanan untuk melindungi seluruh aset dan layanan digital enterprise",
+  "components": [
+   {
+    "name": "G1. Application Security",
+    "notes": "Mengamankan aplikasi dari kerentanan: SAST/DAST, WAF, dan proteksi runtime aplikasi."
+   },
+   {
+    "name": "G2. Network Security",
+    "notes": "Melindungi jaringan dari ancaman: firewall, IDS/IPS, network segmentation, dan monitoring traffic."
+   },
+   {
+    "name": "G3. Vulnerability Management",
+    "notes": "Mengidentifikasi, menilai prioritas, dan mengoordinasikan perbaikan kerentanan keamanan sistem."
+   },
+   {
+    "name": "G4. Identity & Access Management",
+    "notes": "Mengelola identitas digital karyawan/pengguna internal, hak akses, dan siklus hidup akun."
+   },
+   {
+    "name": "G5. Authentication & Authorization",
+    "notes": "Memverifikasi identitas pengguna saat login (autentikasi) dan mengotorisasi tindakan yang boleh dilakukan."
+   },
+   {
+    "name": "G6. Data Security",
+    "notes": "Melindungi data dari akses tidak sah, kebocoran, dan manipulasi melalui enkripsi, masking, dan DLP."
+   },
+   {
+    "name": "G7. Fraud Management",
+    "notes": "Mendeteksi, menyelidiki, dan mencegah penipuan (fraud) dalam layanan telekomunikasi dan transaksi."
+   }
+  ]
+ },
+ {
+  "name": "H. Intelligence Management",
+  "notes": "Menyediakan insight & otomasi berbasis data: analitik/prediksi/next-best-action, Autonomic Manager untuk control-loop, manajemen algoritma/model AI, data lake, knowledge plane, serta governance, training, dan testing model.",
+  "components": [
+   {
+    "name": "H1. Data Foundation",
+    "notes": "Menyediakan platform data terpusat: data lake, data warehouse, pipeline ETL/ELT, dan data governance."
+   },
+   {
+    "name": "H2. Insight Layer",
+    "notes": "Mengubah data yang sudah diolah menjadi insight: analitik, dashboard KPI, dan laporan manajemen."
+   },
+   {
+    "name": "H3. AI/ML Layer",
+    "notes": "Platform untuk membangun, melatih, mengelola, dan men-deploy model AI/ML ke production (MLOps)."
+   }
+  ]
+ }
+]

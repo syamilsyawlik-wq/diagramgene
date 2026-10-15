@@ -1,0 +1,3 @@
+Nama Aplikasi;Deskripsi;ODA Domain;ODA Component;Kritikalitas;Status;Data Management - Database / Data Store Platform
+WorkOrder A;Aplikasi contoh pertama;D. Production;D25. Work Order Management;Critical;Active;PostgreSQL
+WorkOrder B;Aplikasi contoh kedua;D. Production;D25. Work Order Management;Supporting;Active;PostgreSQL

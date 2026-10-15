@@ -1,0 +1,51 @@
+<mxfile><diagram name="Arsitektur"><mxGraphModel><root>
+  <mxCell id="0"/><mxCell id="1" parent="0"/>
+  <mxCell id="data_layer" value="Data" style="swimlane;" vertex="1" parent="1">
+    <mxGeometry x="20" y="50" width="200" height="700" as="geometry"/>
+  </mxCell>
+  <mxCell id="business_layer" value="Business" style="swimlane;" vertex="1" parent="1">
+    <mxGeometry x="300" y="50" width="200" height="700" as="geometry"/>
+  </mxCell>
+  <mxCell id="technology_layer" value="Technology" style="swimlane;" vertex="1" parent="1">
+    <mxGeometry x="500" y="50" width="200" height="700" as="geometry"/>
+  </mxCell>
+  <mxCell id="application_layer" value="Application" style="swimlane;" vertex="1" parent="1">
+    <mxGeometry x="700" y="50" width="300" height="700" as="geometry"/>
+  </mxCell>
+  <mxCell id="customer" value="Data pelanggan" style="shape=note;" vertex="1" parent="data_layer">
+    <mxGeometry x="20" y="120" width="160" height="70" as="geometry"/>
+  </mxCell>
+  <mxCell id="service" value="Business Service&lt;br&gt;B2C" style="shape=note;" vertex="1" parent="business_layer">
+    <mxGeometry x="20" y="100" width="160" height="70" as="geometry"/>
+  </mxCell>
+  <mxCell id="server" value="Server" style="rounded=0;" vertex="1" parent="technology_layer">
+    <mxGeometry x="20" y="260" width="160" height="70" as="geometry"/>
+  </mxCell>
+  <mxCell id="network" value="Network" style="shape=note;" vertex="1" parent="technology_layer">
+    <mxGeometry x="20" y="400" width="160" height="70" as="geometry"/>
+  </mxCell>
+  <mxCell id="ai" value="AI" style="shape=note;" vertex="1" parent="technology_layer">
+    <mxGeometry x="20" y="540" width="160" height="70" as="geometry"/>
+  </mxCell>
+  <mxCell id="crm" value="CRM" style="rounded=0;" vertex="1" parent="application_layer">
+    <mxGeometry x="80" y="100" width="160" height="70" as="geometry"/>
+  </mxCell>
+  <mxCell id="caption" value="Contoh arsitektur sintetis" style="text;" vertex="1" parent="1">
+    <mxGeometry x="20" y="780" width="250" height="30" as="geometry"/>
+  </mxCell>
+  <mxCell id="crm_service" value="mendukung" edge="1" source="crm" target="service" parent="1">
+    <mxGeometry relative="1" as="geometry"/>
+  </mxCell>
+  <mxCell id="service_data" value="mengakses" edge="1" source="service" target="customer" parent="1">
+    <mxGeometry relative="1" as="geometry"/>
+  </mxCell>
+  <mxCell id="server_crm" edge="1" source="server" target="crm" parent="1">
+    <mxGeometry relative="1" as="geometry"/>
+  </mxCell>
+  <mxCell id="network_crm" edge="1" source="network" target="crm" parent="1">
+    <mxGeometry relative="1" as="geometry"/>
+  </mxCell>
+  <mxCell id="ai_crm" edge="1" source="ai" target="crm" parent="1">
+    <mxGeometry relative="1" as="geometry"/>
+  </mxCell>
+</root></mxGraphModel></diagram></mxfile>

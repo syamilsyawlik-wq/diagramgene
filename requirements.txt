@@ -1,0 +1,4 @@
+streamlit>=1.37
+matplotlib>=3.7
+defusedxml>=0.7
+openpyxl>=3.1

@@ -1,0 +1,18 @@
+<mxfile><diagram name="Persetujuan"><mxGraphModel><root>
+  <mxCell id="0"/><mxCell id="1" parent="0"/>
+  <mxCell id="start" value="Mulai" style="ellipse;" vertex="1" parent="1">
+    <mxGeometry x="100" y="20" width="40" height="40" as="geometry"/>
+  </mxCell>
+  <mxCell id="task" value="Periksa permintaan" style="rounded=1;" vertex="1" parent="1">
+    <mxGeometry x="60" y="120" width="120" height="60" as="geometry"/>
+  </mxCell>
+  <mxCell id="end" value="Selesai" style="ellipse;" vertex="1" parent="1">
+    <mxGeometry x="100" y="240" width="40" height="40" as="geometry"/>
+  </mxCell>
+  <mxCell id="flow1" edge="1" source="start" target="task" parent="1">
+    <mxGeometry relative="1" as="geometry"/>
+  </mxCell>
+  <mxCell id="flow2" edge="1" source="task" target="end" parent="1">
+    <mxGeometry relative="1" as="geometry"/>
+  </mxCell>
+</root></mxGraphModel></diagram></mxfile>
