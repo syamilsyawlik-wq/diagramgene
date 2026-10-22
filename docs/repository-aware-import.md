@@ -33,7 +33,7 @@ Source document/page/element IDs, master GUID/ElementID, and newly created diagr
 | `legacy_safety.py`, `trm_mode.py` | Local-only guard for existing TRM pending shared resolver integration |
 | `tests/ea_model_stub.js`, `tests/test_repository_import.py`, `tests/test_app.py` | Strict API fixtures, safety tests and UI regression tests |
 
-No dependencies, direct database readers, bridge, external service, Windows requirements, or authentication changes were added. Legacy layout scenes remain available to existing Python callers; the import plan is authoritative for model semantics. The app uses the governed plan for BPMN previews.
+No dependencies, direct database readers, bridge, external service, or Windows requirements were added. The local UI opens without a password; repository validation and execution approvals still apply. Legacy layout scenes remain available to existing Python callers; the import plan is authoritative for model semantics. The app uses the governed plan for BPMN previews.
 
 ## Export a target snapshot
 

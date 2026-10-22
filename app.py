@@ -1,17 +1,13 @@
 """
 Streamlit: upload draw.io / Visio -> JScript untuk membuat diagram BPMN di Sparx EA.
 Jalankan:  streamlit run app.py
-Password diambil dari environment APP_PASSWORD atau .streamlit/secrets.toml.
+Penggunaan lokal langsung tanpa login; validasi repository EA tetap berlaku.
 """
 import hashlib
-import hmac
-import os
 import re
-import time
 from pathlib import Path
 
 import streamlit as st
-from streamlit.errors import StreamlitSecretNotFoundError
 
 from drawio_to_sparx import convert, list_pages
 from generic_mode import convert_generic, list_generic_pages, load_generic_pages
@@ -26,7 +22,6 @@ from repository_review import profile_controls, review_plan
 from catalogue_snapshot import read_snapshot
 from import_plan import preview_pages
 
-MAX_ATTEMPTS, LOCKOUT_SEC = 5, 60
 LAYOUTS = {
     "Vertikal: lane jadi kolom, alur atas ke bawah": ("vertical", False),
     "Horizontal: lane jadi baris, alur kiri ke kanan": ("horizontal", False),
@@ -80,52 +75,12 @@ PDF dan gambar hasil scan juga belum didukung.
 st.set_page_config(page_title="Import ke Sparx EA", page_icon="🧑‍🍳", layout="centered")
 
 
-# --------------------------------------------------------------------------- auth
-def require_login():
-    if st.session_state.get("authed"):
-        return
-    expected = os.environ.get("APP_PASSWORD", "")
-    if not expected:
-        try:
-            expected = st.secrets.get("APP_PASSWORD", "")
-        except StreamlitSecretNotFoundError:
-            expected = ""
-    if not expected:
-        st.error("APP_PASSWORD belum diatur. Isi environment variable APP_PASSWORD "
-                 "atau salin .streamlit/secrets.toml.example ke .streamlit/secrets.toml "
-                 "dan isi password-nya, lalu jalankan ulang.")
-        st.stop()
-
-    st.title("Import ke Sparx EA")
-    locked_until = st.session_state.get("locked_until", 0)
-    if time.time() < locked_until:
-        st.error(f"Terlalu banyak percobaan. Coba lagi dalam {int(locked_until - time.time())} detik.")
-        st.stop()
-
-    with st.form("login"):
-        pw = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Masuk", type="primary")
-    if submitted:
-        if hmac.compare_digest(pw.encode(), expected.encode()):
-            st.session_state.authed = True
-            st.session_state.attempts = 0
-            st.rerun()
-        attempts = st.session_state.get("attempts", 0) + 1
-        st.session_state.attempts = attempts
-        if attempts >= MAX_ATTEMPTS:
-            st.session_state.locked_until = time.time() + LOCKOUT_SEC
-            st.session_state.attempts = 0
-        st.error("Password salah.")
-    st.stop()
-
-
-require_login()
-
+# Reset only the local review/session; this does not write to EA.
 with st.sidebar:
-    st.caption("Masuk sebagai pengguna internal")
-    if st.button("Keluar"):
-        for k in list(st.session_state.keys()):
-            del st.session_state[k]
+    if st.button("Reset sesi"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.session_state['diagram_mode'] = None
         st.rerun()
 
 # --------------------------------------------------------------------------- UI
@@ -134,7 +89,7 @@ st.title("Import ke Sparx EA")
 st.write("Upload diagram dari draw.io atau Visio, atau CSV portofolio aplikasi. Hasilnya script JScript "
          "untuk membangun diagram dan model di Sparx EA.")
 
-mode_label = st.radio("1. Pilih jenis diagram", list(MODES), index=None,
+mode_label = st.radio("1. Pilih jenis diagram", list(MODES), index=None, key="diagram_mode",
                       help="Pilih dulu sebelum upload.")
 if mode_label is None:
     st.info("Pilih jenis diagram dulu.\n\n"

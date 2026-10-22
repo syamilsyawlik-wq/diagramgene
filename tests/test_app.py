@@ -1,4 +1,4 @@
-"""Regresi startup, login, dan navigasi tanpa server atau password nyata."""
+"""Regresi akses langsung, reset sesi, dan navigasi tanpa password."""
 import os
 import io
 from pathlib import Path
@@ -31,22 +31,18 @@ class AppTests(unittest.TestCase):
     def assert_no_exception(self, at):
         self.assertEqual(len(at.exception), 0, [e.message for e in at.exception])
 
-    def login(self, at, password):
-        at.text_input[0].input(password)
-        at.button[0].click().run()
-        self.assert_no_exception(at)
-
     def enter_generic(self, at):
         at.radio[0].set_value("Diagram umum → entitas & relasi").run()
         # Existing standalone-import tests deliberately disable catalogue reuse.
         at.checkbox[0].uncheck().run()
         return at
 
-    def test_missing_password_shows_configuration_message(self):
+    def test_app_opens_without_password_or_secrets(self):
         at = self.app()
         self.assert_no_exception(at)
-        self.assertIn("APP_PASSWORD belum diatur", at.error[0].value)
-        self.assertEqual(len(at.radio), 0)
+        self.assertEqual(at.radio[0].label, "1. Pilih jenis diagram")
+        self.assertFalse(any(field.label == "Password" for field in at.text_input))
+        self.assertFalse(any(button.label == "Masuk" for button in at.button))
 
     def test_missing_secrets_file_does_not_crash(self):
         with patch("streamlit.runtime.secrets.Secrets._parse") as read_secrets:
@@ -54,24 +50,18 @@ class AppTests(unittest.TestCase):
             read_secrets.side_effect = StreamlitSecretNotFoundError("Missing test secrets")
             at = self.app()
         self.assert_no_exception(at)
-        self.assertIn("APP_PASSWORD belum diatur", at.error[0].value)
+        self.assertEqual(at.radio[0].label, "1. Pilih jenis diagram")
+        read_secrets.assert_not_called()
 
-    def test_environment_password_takes_precedence(self):
+    def test_existing_password_configuration_does_not_require_login(self):
         with patch.dict(os.environ, {"APP_PASSWORD": self.password}):
             at = self.app(password=secrets.token_urlsafe(24))
-            self.login(at, self.password)
-        self.assertTrue(at.session_state["authed"])
+        self.assert_no_exception(at)
+        self.assertEqual(at.radio[0].label, "1. Pilih jenis diagram")
+        self.assertFalse(any(field.label == "Password" for field in at.text_input))
 
-    def test_wrong_password_cannot_access_modes(self):
-        at = self.app(self.password)
-        self.login(at, "wrong-password")
-        self.assertIn("Password salah", at.error[0].value)
-        self.assertEqual(len(at.radio), 0)
-        self.assertNotIn("authed", at.session_state)
-
-    def test_login_modes_and_logout(self):
-        at = self.app(self.password)
-        self.login(at, self.password)
+    def test_modes_and_reset_session_without_login(self):
+        at = self.app()
         for label in ["Alur proses → BPMN", "Diagram umum → entitas & relasi",
                       "Portofolio aplikasi (CSV) → TRM"]:
             with self.subTest(mode=label):
@@ -80,26 +70,16 @@ class AppTests(unittest.TestCase):
                 else:
                     at.radio[0].set_value(label).run()
                 self.assert_no_exception(at)
-                self.assertEqual(len(at.get("file_uploader")), 2)  # Diagram + repository snapshot.
-        at.session_state["result"] = {"test": "discard on logout"}
-        at.sidebar.button[0].click().run()
+                self.assertEqual(len(at.get("file_uploader")), 2)
+        at.session_state["result"] = {"test": "discard on reset"}
+        next(button for button in at.sidebar.button if button.label == "Reset sesi").click().run()
         self.assert_no_exception(at)
         self.assertNotIn("result", at.session_state)
-        self.assertNotIn("authed", at.session_state)
-        self.assertEqual(len(at.radio), 0)
-
-    def test_five_wrong_attempts_lock_session(self):
-        at = self.app(self.password)
-        for _ in range(5):
-            self.login(at, "wrong-password")
-        at.run()
-        self.assert_no_exception(at)
-        self.assertIn("Terlalu banyak percobaan", at.error[0].value)
-        self.assertEqual(len(at.text_input), 0)
+        self.assertIsNone(at.radio[0].value)
+        self.assertFalse(any(field.label == "Password" for field in at.text_input))
 
     def test_generic_upload_mapping_and_regeneration(self):
         at = self.app(self.password)
-        self.login(at, self.password)
         upload = io.BytesIO((ROOT / "examples/arsitektur_entitas.drawio").read_bytes())
         upload.name = "arsitektur.drawio"
 
@@ -136,7 +116,6 @@ class AppTests(unittest.TestCase):
 
     def test_generic_mapping_editor_accepts_real_rows(self):
         at = self.app(self.password)
-        self.login(at, self.password)
         upload = io.BytesIO((ROOT / "examples/arsitektur_entitas.drawio").read_bytes())
         upload.name = "arsitektur.drawio"
         with patch("streamlit.file_uploader", return_value=upload):
@@ -149,7 +128,6 @@ class AppTests(unittest.TestCase):
 
     def test_archimate_profile_and_relationship_mapping(self):
         at = self.app(self.password)
-        self.login(at, self.password)
         upload = io.BytesIO((ROOT / "examples/arsitektur_entitas.drawio").read_bytes())
         upload.name = "arsitektur.drawio"
 
@@ -181,7 +159,6 @@ class AppTests(unittest.TestCase):
 
     def test_visio_upload_in_generic_mode(self):
         at = self.app(self.password)
-        self.login(at, self.password)
         upload = io.BytesIO(make_vsdx())
         upload.name = "applications.vsdx"
         with patch("streamlit.file_uploader", return_value=upload):
@@ -201,7 +178,7 @@ class AppTests(unittest.TestCase):
         from test_repository_import import export, fixture_base
         snapshot=io.BytesIO(json.dumps(export(fixture_base())).encode());snapshot.name='synthetic.catalogue.json'
         diagram=io.BytesIO((ROOT/'examples/manager_dan_proses.drawio').read_bytes());diagram.name='manager.drawio'
-        at=self.app(self.password);self.login(at,self.password)
+        at=self.app(self.password)
         def uploads(*args,**kwargs):
             if kwargs.get('key')=='repository_snapshot': return snapshot
             if kwargs.get('key')=='catalogue_upload': return None
@@ -235,7 +212,7 @@ class AppTests(unittest.TestCase):
             if rows and 'Confirm semantics' in rows[0]:
                 return [{**row,'Confirm semantics':True,'Existing ConnectorGUID':CONNECTOR} for row in rows]
             return rows
-        at=self.app(self.password);self.login(at,self.password)
+        at=self.app(self.password)
         with patch('streamlit.file_uploader',side_effect=uploads),patch('streamlit.data_editor',side_effect=edit):
             at.radio[0].set_value('Diagram umum → entitas & relasi').run()
             next(r for r in at.radio if r.label=='Mode runtime JScript').set_value('EXECUTE').run()
@@ -253,7 +230,6 @@ class AppTests(unittest.TestCase):
 
     def test_catalogue_default_requires_valid_package_before_generation(self):
         at = self.app(self.password)
-        self.login(at, self.password)
         diagram = io.BytesIO((ROOT / "examples/manager_dan_proses.drawio").read_bytes())
         diagram.name = "manager.drawio"
         with patch("streamlit.file_uploader", side_effect=lambda *a, **kw: None if kw.get("key") == "catalogue_upload" else diagram):
@@ -273,7 +249,6 @@ class AppTests(unittest.TestCase):
 
     def test_catalogue_metadata_turns_plain_manager_note_into_reference_to_actor(self):
         at = self.app(self.password)
-        self.login(at, self.password)
         source = (ROOT / "examples/manager_dan_proses.drawio").read_bytes().replace(b"shape=umlActor", b"shape=note")
         diagram = io.BytesIO(source); diagram.name = "manager.drawio"
         metadata = io.BytesIO(catalog_csv()); metadata.name = "catalogue.csv"
@@ -291,7 +266,6 @@ class AppTests(unittest.TestCase):
 
     def test_ambiguous_catalogue_name_blocks_generation_in_ui(self):
         at = self.app(self.password)
-        self.login(at, self.password)
         source = (ROOT / "examples/manager_dan_proses.drawio").read_bytes().replace(b"shape=umlActor", b"shape=note")
         diagram = io.BytesIO(source); diagram.name = "manager.drawio"
         metadata = io.BytesIO(catalog_csv([(MANAGER, "Manager", "Actor", "", "Actors"),

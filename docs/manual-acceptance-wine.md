@@ -2,7 +2,7 @@
 
 **Status: NOT RUN. Production release blocker.** Automated Python/Node API fixtures do not substitute for this checklist. Record EA version, MDG BPMN/ArchiMate versions, Wine version, date, and actual results here or in a private test record. Do not attach the company catalogue/repository to Git.
 
-Use your existing working EA/Wine setup. No COM bridge, Windows VM, Wine reinstall or production connection is needed. Use synthetic data and a disposable **local `.qea`** repository. Keep DiagramGene on `127.0.0.1` with the existing authentication settings.
+Use your existing working EA/Wine setup. No COM bridge, Windows VM, Wine reinstall or production connection is needed. Use synthetic data and a disposable **local `.qea`** repository. Keep DiagramGene on `127.0.0.1`. The local UI opens without a password; repository validation and execution approvals remain mandatory.
 
 ## Prepare a synthetic repository
 

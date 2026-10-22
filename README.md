@@ -17,22 +17,20 @@ Contoh berikut untuk Linux, macOS, atau cloud workspace:
 ```bash
 python -m venv .venv
 .venv/bin/python -m pip install -r requirements.lock
-cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 ```
 
-Isi `APP_PASSWORD` di `.streamlit/secrets.toml` dengan password sendiri, lalu:
+Aplikasi langsung terbuka tanpa password. Jalankan:
 
 ```bash
 .venv/bin/python -m streamlit run app.py --server.address 127.0.0.1
 ```
 
 Pada Windows, gunakan `.venv\Scripts\python.exe` sebagai pengganti
-`.venv/bin/python`, dan salin file contoh melalui File Explorer atau PowerShell.
+`.venv/bin/python`.
 
-Alternatif untuk deployment/cloud: sediakan environment variable `APP_PASSWORD`
-melalui pengaturan rahasia platform. Environment variable yang tidak kosong
-diprioritaskan di atas file secrets. Tanpa keduanya, aplikasi menampilkan petunjuk
-konfigurasi dan menutup akses konversi. Jangan commit password.
+Tidak perlu membuat file secrets atau mengatur `APP_PASSWORD`. Konfigurasi password
+lama tidak lagi menampilkan login. Tombol **Reset sesi** membersihkan pilihan dan
+hasil review lokal. Validasi repository EA dan persetujuan EXECUTE tetap berlaku.
 
 Devcontainer menyiapkan venv dan dependensi otomatis, lalu menjalankan Streamlit
 pada port 8501 dengan perlindungan CORS dan XSRF bawaan tetap aktif.
@@ -143,7 +141,7 @@ script baru dan jalankan pada package tujuan yang baru/sandbox untuk memeriksa h
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Suite mencakup startup tanpa secrets, login/logout dan pembatasan percobaan,
+Suite mencakup startup tanpa password/secrets, reset sesi,
 navigasi mode, layout BPMN, diagram umum, draw.io terkompresi/embedded SVG,
 pemetaan TRM, nama aplikasi duplikat, daftar aplikasi belum terpetakan, konversi
 XLSX, entitas serta endpoint connector UML/ArchiMate, reader VSDX, dan penolakan
@@ -170,7 +168,7 @@ Validasi kedua versi Python sebelum mengirim pembaruan lockfile.
 
 ## Struktur kode
 
-- `app.py`: login, upload, konfigurasi mode, preview, dan download.
+- `app.py`: akses langsung, upload, konfigurasi mode, preview, dan download.
 - `drawio_to_sparx.py`: pembacaan draw.io, pemetaan BPMN, layout, generator JScript.
 - `visio_reader.py`: pembaca Visio `.vsdx`.
 - `generic_mode.py`: pemetaan diagram umum ke elemen Sparx.
@@ -199,7 +197,7 @@ elemen/relasi dan persetujuan eksplisit.
 
 ## Penggunaan internal
 
-Password bersama melindungi halaman aplikasi; pembatasan percobaan login berlaku
-per session. Gunakan server/jaringan internal untuk dokumen internal, dan HTTPS
-ketika diakses melalui jaringan. File secrets, diagram internal, dan hasil
-konversi diabaikan oleh Git; hanya contoh sintetis di `examples/` yang disertakan.
+Aplikasi lokal berjalan di `127.0.0.1` tanpa login. Akses aplikasi tidak memberikan
+izin menulis ke repository EA: preflight, kebijakan production, dan persetujuan
+impor tetap berlaku. File secrets lama, diagram internal, dan hasil konversi
+diabaikan oleh Git; hanya contoh sintetis di `examples/` yang disertakan.
