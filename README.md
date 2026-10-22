@@ -41,11 +41,15 @@ Generator BPMN dan Generic sekarang memakai shared import plan, katalog berscope
 review elemen/relasi, dan preflight terhadap repository EA aktif. Default script
 adalah **VALIDATE_ONLY**: tidak membuat atau mengubah model.
 
-1. Di Sparx EA melalui Wine pada macOS, pilih root katalog dan jalankan
-   `export_ea_catalogue.js` sebagai **JScript**. Simpan output JSON v2 secara privat.
-2. Di sidebar DiagramGene pilih **Local Testing** atau **Holding Production**,
-   upload snapshot, periksa expected identity, root/scope katalog dan package output.
-   Memilih profile tidak membuktikan repository EA aktif sama; runtime memeriksa ulang.
+1. Untuk repository lokal, hentikan penulisan EA lalu pilih **Repository EA →
+   Local Testing → File QEA lokal**. Masukkan path macOS file `.qea` dan klik
+   **Analisis repository**. File dibaca langsung oleh Python secara read-only;
+   database tidak di-upload atau disalin. Path berada pada mesin backend DiagramGene.
+2. Cari/pilih **Package katalog / scope** beserta package output. Buka inspector
+   untuk melihat elemen, GUID, diagram dan relasi per halaman. Pada pengaturan
+   lanjutan, periksa pemetaan path yang terlihat oleh EA/Wine; `Z:` hanyalah usulan.
+   Untuk server/Production atau skema yang belum didukung, pilih **Snapshot
+   JSON/CSV (lanjutan)** dan gunakan exporter JScript read-only existing.
 3. Upload diagram, pilih halaman dan periksa semantic type. Pada tabel review,
    pilih master GUID yang benar untuk **REUSE**, atau setujui **NEW** per elemen.
 4. Periksa endpoint, tipe, arah, nama/meaning dan ConnectorGUID di tabel relasi.
@@ -59,6 +63,14 @@ Actor katalog pada dua diagram dengan ElementGUID/ElementID yang sama. Pool/Lane
 BPMN dapat direuse jika parent dan konteks cocok. Parent salah, ambigu, GUID stale,
 MDG tidak tersedia atau repository berbeda menghentikan proses sebelum penulisan.
 CSV katalog lama tetap bisa dibaca untuk discovery; gunakan snapshot v2 untuk reuse runtime.
+
+Pembaca QEA menghasilkan kontrak katalog v2 yang sama. Klik **Segarkan repository**
+setelah model berubah dan ulangi review. File dengan WAL/journal/SHM ditolak;
+`.qeax` belum didukung pembaca langsung. Metadata semantik yang belum dipahami
+memerlukan review dan tidak dapat dipaksa menjadi reuse. Default ekstraksi dibatasi
+10.000 elemen/25.000 connector per scope; pilih subpackage untuk model besar.
+Inspector menampilkan maksimal 50 baris per halaman. Detail keamanan path, cache,
+benchmark dan status implementasi: [Direct QEA Reader](docs/direct-qea-reader.md).
 
 **Status: tes otomatis bukan bukti kompatibilitas EA nyata. Acceptance EA masih
 belum dijalankan dan memblokir rilis produksi.** Panduan lengkap, arsitektur, file

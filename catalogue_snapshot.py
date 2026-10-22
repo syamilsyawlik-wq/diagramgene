@@ -20,10 +20,27 @@ def read_snapshot(raw):
                            package_guid=legacy['package_guid'], parent_guid='', alias='', business_id='', opco='', legacy=True)
         return {**legacy, 'schema_version':1, 'repository_identity':None, 'exported_at':'',
                 'packages':[], 'connectors':[], 'metadata_complete':False}
-    data = json.loads(text)
+    return normalise_snapshot(json.loads(text))
+
+
+def normalise_snapshot(data, trusted_local=False):
+    """Validate v2 dictionaries from JSON or a read-only repository provider."""
     if data.get('schema_version') != 2 or data.get('format') != 'diagramgene.catalogue':
         raise ValueError('Versi/schema snapshot katalog tidak didukung.')
     identity = validate_identity(data['repository_identity'])
+    source=data.get('repository_source')
+    if source is not None:
+        if not isinstance(source,dict): raise ValueError('Provenance repository harus berupa object.')
+        allowed={'provider','backend_path','fingerprint','signals','schema_fingerprint','captured_at','consistency',
+                 'observed_markers','scope_guid','identity_confidence','identity_limitations'}
+        source={key:value for key,value in source.items() if key in allowed}
+        if source.get('provider')=='local_qea':
+            if identity['kind']!='local' or not re.fullmatch('[0-9a-f]{64}',str(source.get('fingerprint',''))):
+                raise ValueError('Identity/fingerprint provenance QEA tidak valid.')
+            if not isinstance(source.get('backend_path'),str): raise ValueError('Provenance path QEA tidak valid.')
+        # Uploaded JSON cannot authorize a server-side path read, even if it
+        # contains a forged trusted_capture flag. Only in-process providers can.
+        source['trusted_capture']=bool(trusted_local and source.get('provider')=='local_qea')
     if not isinstance(data.get('exported_at'),str) or not data['exported_at']:
         raise ValueError('Snapshot timestamp wajib diisi.')
     root = guid(data['package_guid'])
@@ -40,13 +57,14 @@ def read_snapshot(raw):
         seen.add(package['guid'])
     if root not in seen: raise ValueError('Root katalog tidak terdapat dalam snapshot.')
     package_guids = set(seen)
+    packages_by_guid={p['guid']:p for p in packages}
     for package in packages:
         if package['guid']!=root and package['parent_guid'] not in package_guids:
             raise ValueError('Hierarchy package snapshot terputus.')
         visited=set(); current=package
         while current.get('parent_guid'):
             if current['guid'] in visited: raise ValueError('Hierarchy package mengandung siklus.')
-            visited.add(current['guid']); current=next(p for p in packages if p['guid']==current['parent_guid'])
+            visited.add(current['guid']); current=packages_by_guid[current['parent_guid']]
         if current['guid'] != root: raise ValueError('Package berada di luar root katalog.')
     seen=set()
     for element in elements:
@@ -68,12 +86,13 @@ def read_snapshot(raw):
         if not isinstance(element.get('bpmn_references',{}),dict): raise ValueError('Metadata reference BPMN tidak valid.')
         if element.get('element_tags_hash') and not re.fullmatch('[0-9a-f]{64}',str(element['element_tags_hash'])):
             raise ValueError('Hash tagged values BPMN tidak valid.')
+    elements_by_guid={e['guid']:e for e in elements}
     for element in elements:
         if element['parent_guid'] and element['parent_guid'] not in seen: raise ValueError('Parent element tidak ada dalam scope snapshot.')
         visited=set();current=element
         while current.get('parent_guid'):
             if current['guid'] in visited: raise ValueError('Hierarchy element mengandung siklus.')
-            visited.add(current['guid']);current=next(e for e in elements if e['guid']==current['parent_guid'])
+            visited.add(current['guid']);current=elements_by_guid[current['parent_guid']]
     relations=set()
     for connector in connectors:
         connector['guid']=guid(connector['guid'])
@@ -100,8 +119,8 @@ def read_snapshot(raw):
     # must not be copied into generated plans even if a hand-edited JSON adds them.
     def select(record, keys): return {key:record[key] for key in keys if key in record}
     return {'format':data['format'],'schema_version':2,'repository_identity':identity,
-            'exported_at':data['exported_at'],'package_guid':root,'metadata_complete':True,
+            'exported_at':data['exported_at'],'package_guid':root,'metadata_complete':True,'repository_source':source,
             'skipped':sum(e['ea_type'] not in EA_ELEMENT_TYPES for e in elements),
             'packages':[select(p,('guid','id','parent_guid','name','path')) for p in packages],
-            'elements':[select(e,('guid','id','name','alias','base_type','stereotype','ea_type','package_guid','parent_guid','package_path','business_id','opco','tags','bpmn_references','element_tags_hash')) for e in elements],
-            'connectors':[select(c,('guid','id','source_guid','target_guid','base_type','stereotype','name','direction','source_role','target_role','tags_hash','notes_hash','semantic_tags','metadata_complete','reason')) for c in connectors]}
+            'elements':[select(e,('guid','id','name','alias','base_type','stereotype','ea_type','package_guid','parent_guid','package_path','business_id','opco','tags','bpmn_references','element_tags_hash','metadata_status','metadata_reasons','uninterpreted_xrefs')) for e in elements],
+            'connectors':[select(c,('guid','id','source_guid','target_guid','base_type','stereotype','name','direction','source_role','target_role','tags_hash','notes_hash','semantic_tags','metadata_complete','reason','metadata_status','metadata_reasons','uninterpreted_xrefs')) for c in connectors]}

@@ -8,7 +8,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from ea_catalogue import guid, descendant_packages, type_matches, scoped_candidates
+from ea_catalogue import guid, descendant_packages, type_matches, scoped_candidates, name_key
 from repository_profiles import normalise_profile, boolean_option
 from semantic_rules import BPMN_TYPES, BPMN_RELATIONS, relation_error, node_error
 from model_types import RELATION_TYPES, EA_ELEMENT_TYPES
@@ -141,6 +141,37 @@ def connector_signature(c):
     return {k:c.get(k) for k in ('source_guid','target_guid','base_type','stereotype','name','direction','source_role','target_role','tags_hash','notes_hash')}
 
 
+def propose_decisions(document,profile,snapshot):
+    """Proposals never grant NEW/relationship/EXECUTE approval.
+
+    A unique name is insufficient: require explicit source shape semantics,
+    verified catalogue type/stereotype, scope and (for BPMN) owning context.
+    """
+    snapshot=snapshot or {};profile=normalise_profile(profile)
+    scope=descendant_packages(snapshot,profile['scope_package_guid'] or profile['catalogue_root_guid'])
+    entries=snapshot.get('elements',[]);result={}
+    for page in document['pages']:
+        for node in page['nodes']:
+            candidates,alias_only=scoped_candidates(entries,node,scope,profile['opco'] or node.get('opco',''))
+            has_context_candidate=bool(candidates)
+            conflicting_metadata=any(e.get('package_guid') in scope and e.get('metadata_status')=='NEEDS_REVIEW'
+                and (name_key(e['name'])==name_key(node['name']) or node.get('business_id') and e.get('business_id')==node['business_id'])
+                for e in entries)
+            parent=result.get(node.get('parent'),{})
+            if node['ea_type'].startswith('BPMN2.0::') and node.get('parent'):
+                candidates=[e for e in candidates if parent.get('master_guid') and e.get('parent_guid')==parent['master_guid']]
+            known=not node.get('inferred',True)
+            if node.get('source_master_guid'):
+                result[node['id']]={'action':'REUSE','master_guid':node['source_master_guid'],'proposal_reason':'GUID master eksplisit dari metadata sumber; wajib lolos preflight.'}
+            elif known and len(candidates)==1 and not alias_only and not candidates[0].get('legacy') and candidates[0].get('metadata_status')!='NEEDS_REVIEW':
+                result[node['id']]={'action':'REUSE','master_guid':candidates[0]['guid'],'proposal_reason':'Bentuk/tipe sumber eksplisit, tipe/stereotype katalog dan scope cocok; satu kandidat.'}
+            elif known and not candidates and not has_context_candidate and not conflicting_metadata and snapshot.get('schema_version')==2 and profile['allow_new_elements'] and node['ea_type'] not in document.get('required_master_types',[]):
+                result[node['id']]={'action':'NEW','master_guid':'','approved_new':False,'proposal_reason':'Tipe sumber eksplisit; master sesuai scope tidak ditemukan. NEW belum disetujui.'}
+            else:
+                result[node['id']]={'action':'REVIEW','master_guid':'','proposal_reason':'Perlu review: semantik belum pasti, alias, metadata tidak lengkap, atau kandidat ambigu.'}
+    return result
+
+
 def build_plan(document, profile, snapshot=None, element_decisions=None, relationship_decisions=None,
                mode='VALIDATE_ONLY', execute_approved=False):
     profile=normalise_profile(profile);snapshot=snapshot or {}
@@ -149,6 +180,18 @@ def build_plan(document, profile, snapshot=None, element_decisions=None, relatio
     plan={'schema_version':1,'document_id':document['source_document_id'],'mode':mode,'profile':profile,
           'snapshot_at':snapshot.get('exported_at',''),'nodes':[],'relationships':[],'pages':[],
           'errors':[],'required_technologies':[]}
+    source=snapshot.get('repository_source')
+    if source:
+        plan['repository_source']=copy.deepcopy(source)
+        if source.get('trusted_capture'):
+            if profile['environment']!='local': plan['errors'].append('Capture QEA lokal tidak memberi izin EXECUTE ke repository production.')
+            if not profile['qea_identity_reviewed']:
+                plan['errors'].append('Lokasi repository menurut EA/Wine belum direview. Path bukan identitas unik global.')
+            from qea_reader import probe, QEAError
+            try:
+                if probe(source['backend_path'])['fingerprint']!=source['fingerprint']:
+                    plan['errors'].append('QEA berubah sejak capture; segarkan dan review ulang.')
+            except QEAError as exc: plan['errors'].append(str(exc))
     if not profile['expected_identity']: plan['errors'].append('Expected repository identity belum diverifikasi/diisi dari snapshot.')
     if snapshot.get('repository_identity') and snapshot['repository_identity']!=profile['expected_identity']:
         plan['errors'].append('Identity snapshot berbeda dari profile repository.')
@@ -201,12 +244,14 @@ def build_plan(document, profile, snapshot=None, element_decisions=None, relatio
                 elif node.get('business_id') and master.get('business_id')!=node['business_id']: node.update(status='BLOCK',reason='Stable business identifier master berbeda.')
                 elif node['qualified_package_path'] and master.get('package_path')!=node['qualified_package_path']: node.update(status='BLOCK',reason='Qualified package identity master berbeda.')
                 elif master.get('legacy'): node.update(status='REVIEW',reason='CSV legacy belum memuat identity/parent/base type yang cukup untuk execute.')
+                elif master.get('metadata_status')=='NEEDS_REVIEW': node.update(status='BLOCK',reason='Metadata repository belum terverifikasi: '+'; '.join(master.get('metadata_reasons',[])))
                 elif node['action']=='REUSE': node.update(status='REUSE',reason='GUID dan tipe/scope cocok; runtime wajib memvalidasi ulang.',master=copy.deepcopy(master))
             elif node['action']=='REUSE':
                 if len(candidates)!=1 or alias_only: node.update(status='BLOCK',reason='Master ambigu/tidak ditemukan atau hanya alias; pilih GUID eksplisit.')
                 else:
                     master=candidates[0]
                     if master.get('legacy'): node.update(status='REVIEW',reason='Ekspor snapshot v2 untuk validasi runtime.')
+                    elif master.get('metadata_status')=='NEEDS_REVIEW': node.update(status='BLOCK',reason='Metadata repository memerlukan review native; tidak akan diasumsikan kompatibel.')
                     else: node.update(status='REUSE',reason='Identitas bisnis atau exact name/type/scope dikonfirmasi.',master_guid=master['guid'],master=copy.deepcopy(master))
             elif node['action']=='NEW':
                 if node.get('requires_master'): node.update(status='BLOCK',reason='Tipe ini wajib memakai master katalog; buat master terpisah di EA lalu ekspor ulang.')
@@ -274,6 +319,8 @@ def build_plan(document, profile, snapshot=None, element_decisions=None, relatio
                 candidates=[c for c in snapshot.get('connectors',[]) if c.get('metadata_complete') and connector_signature(c)==connector_signature(desired)]
                 core=('source_guid','target_guid','base_type','stereotype','name','direction')
                 related=[c for c in snapshot.get('connectors',[]) if all(c.get(k)==r.get(k) for k in core)]
+                uncertain=[c for c in snapshot.get('connectors',[]) if not c.get('metadata_complete') and
+                    {c.get('source_guid'),c.get('target_guid')}=={r['source_guid'],r['target_guid']}]
                 r['candidate_connector_guids']=[c['guid'] for c in related]
                 if r['existing_connector_guid']:
                     selected=next((c for c in snapshot.get('connectors',[]) if c['guid']==guid(r['existing_connector_guid'])),None)
@@ -289,6 +336,7 @@ def build_plan(document, profile, snapshot=None, element_decisions=None, relatio
                     r.update(action='REUSE',reason='Seluruh signature semantik cocok.',existing_connector_guid=candidates[0]['guid'],expected_connector=copy.deepcopy(candidates[0]))
                 elif candidates: r.update(action='REVIEW',reason='Relasi tanpa nama/meaning memerlukan pemilihan ConnectorGUID eksplisit.')
                 elif related: r.update(action='REVIEW',reason='Connector dengan makna inti sama mempunyai metadata role/tag berbeda/tidak lengkap; pilih GUID dan review di EA.')
+                elif uncertain: r.update(action='REVIEW',reason='Endpoint mempunyai connector dengan metadata belum terverifikasi. Lengkapi katalog melalui exporter/native review sebelum mengusulkan relasi baru.')
                 else: r.update(action='PROPOSE_CREATE',reason='Tidak ada connector setara; butuh persetujuan per relasi.')
             plan['relationships'].append(r)
             if r['action']=='PROPOSE_CREATE' and any(r[field]['role_note_hash']!=EMPTY_TEXT_HASH for field in ('source_role','target_role')):

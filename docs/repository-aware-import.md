@@ -33,7 +33,7 @@ Source document/page/element IDs, master GUID/ElementID, and newly created diagr
 | `legacy_safety.py`, `trm_mode.py` | Local-only guard for existing TRM pending shared resolver integration |
 | `tests/ea_model_stub.js`, `tests/test_repository_import.py`, `tests/test_app.py` | Strict API fixtures, safety tests and UI regression tests |
 
-No dependencies, direct database readers, bridge, external service, or Windows requirements were added. The local UI opens without a password; repository validation and execution approvals still apply. Legacy layout scenes remain available to existing Python callers; the import plan is authoritative for model semantics. The app uses the governed plan for BPMN previews.
+P0 did not add dependencies, a bridge, external services, or Windows requirements. The subsequent [Direct QEA Reader milestone](direct-qea-reader.md) adds a local, read-only SQLite provider using Python's built-in library. It feeds this same catalogue/planner/runtime. The local UI opens without a password; repository validation and execution approvals still apply. Legacy layout scenes remain available to existing Python callers; the import plan is authoritative for model semantics. The app uses the governed plan for BPMN previews.
 
 ## Export a target snapshot
 
@@ -41,7 +41,7 @@ No dependencies, direct database readers, bridge, external service, or Windows r
 2. Select the catalogue root in the Browser. Include the relevant OPCO subpackages and both endpoints of relationships you want to reuse.
 3. Download **Exporter snapshot v2 (read-only)** from DiagramGene, or open `export_ea_catalogue.js` from this repository.
 4. Paste the whole script into an EA **JScript** script in **Specialize → Scripting** and run it. It only reads Automation API objects; clearing the Script output tab does not modify the model.
-5. Copy only the JSON object from **Output → Script** into a private UTF-8 file such as `holding.catalogue.json`. Upload it to **Target repository EA → Snapshot repository EA**.
+5. Copy only the JSON object from **Output → Script** into a private UTF-8 file such as `holding.catalogue.json`. Choose **Repository EA → Snapshot JSON/CSV (lanjutan)** and upload it. Local QEA reading is now the default; this exporter remains an optional fallback and the server snapshot path.
 
 The exporter records package hierarchy, IDs/GUIDs, qualified paths, names/aliases, native base types, qualified stereotypes, parent elements, whitelisted business/scope/BPMN tags, and connector endpoint/role/tag fingerprints. It never exports element Notes, documents, raw connection strings, or credentials. Connector tagged values and memo bodies are fingerprinted rather than exported as text; only the non-secret Access mode is included as a semantic value. Connector Notes and role notes are also fingerprinted without exporting their text. Missing metadata blocks automatic reuse; memo business identifiers and BPMN semantic properties require manual handling. BPMN tags are also fingerprinted to detect reference/context changes. Unsupported connector metadata is explicitly marked incomplete.
 

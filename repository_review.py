@@ -2,49 +2,14 @@
 import copy
 import hashlib
 import json
-from pathlib import Path
 import streamlit as st
-from catalogue_snapshot import read_snapshot
-from import_plan import read_source, apply_layout, build_plan, generate_jscript, fingerprint
+from import_plan import read_source, apply_layout, build_plan, generate_jscript, fingerprint, propose_decisions
 from model_types import EA_TYPE_LABELS, EA_LABEL_TYPES, RELATION_TYPES
-from repository_profiles import load_profiles, save_profiles, normalise_profile
 
 
 def profile_controls():
-    try: profiles=load_profiles()
-    except (ValueError,OSError) as exc:
-        st.sidebar.error(str(exc)); profiles={name:normalise_profile({'name':name,'environment':env}) for name,env in [('Local Testing','local'),('Holding Production','production')]}
-    with st.sidebar.expander('Target repository EA',expanded=True):
-        name=st.selectbox('Repository profile',list(profiles),key='repository_profile')
-        saved=profiles[name]
-        metadata=st.file_uploader('Snapshot repository EA (JSON v2 / CSV legacy)',type=['json','csv'],key='repository_snapshot')
-        st.download_button('Exporter snapshot v2 (read-only)',Path(__file__).with_name('export_ea_catalogue.js').read_text(),file_name='export_ea_catalogue.js')
-        snapshot=None
-        if metadata:
-            try: snapshot=read_snapshot(metadata.getvalue())
-            except (ValueError,KeyError,TypeError,UnicodeError) as exc: st.error(str(exc))
-        identity=st.text_area('Expected repository identity (non-secret JSON)',
-                              value=json.dumps(saved.get('expected_identity') or (snapshot or {}).get('repository_identity') or {},ensure_ascii=False),
-                              key='identity_'+name+'_'+str(bool(snapshot)))
-        root=st.text_input('Catalogue root GUID (profile)',value=saved.get('catalogue_root_guid') or (snapshot or {}).get('package_guid',''),key='root_'+name+'_'+str(bool(snapshot)))
-        scope=st.text_input('Scope package GUID / OPCO catalogue',value=saved.get('scope_package_guid',''),key='scope_'+name)
-        opco=st.text_input('OPCO / namespace impor',value=saved.get('opco',''),key='opco_'+name)
-        output=st.text_input('Output package GUID (production: wajib)',value=saved.get('output_package_guid',''),key='output_'+name)
-        allow_new=st.checkbox('Izinkan elemen lokal baru (tetap perlu persetujuan per elemen)',value=saved['allow_new_elements'],key='new_'+name)
-        execution=st.radio('Mode runtime JScript',['VALIDATE_ONLY','EXECUTE'],key='exec_'+name)
-        st.caption('Memilih profile tidak mengubah repository yang terbuka di EA. JScript selalu memeriksa identity aktif. Jangan masukkan connection string/password.')
-        profile={**saved,'catalogue_root_guid':root,'scope_package_guid':scope,'output_package_guid':output,
-                 'opco':opco,'allow_new_elements':allow_new,'last_snapshot_at':(snapshot or {}).get('exported_at',saved.get('last_snapshot_at',''))}
-        try:
-            profile['expected_identity']=json.loads(identity) or None
-            profile=normalise_profile(profile)
-        except (ValueError,TypeError) as exc:
-            st.error(str(exc));profile={**saved,'expected_identity':None}
-        if st.button('Simpan metadata profile lokal'):
-            profiles[name]=profile
-            try: save_profiles(profiles);st.success('Profile non-rahasia tersimpan di .diagramgene/profiles.json (diabaikan Git).')
-            except (ValueError,OSError) as exc: st.error(str(exc))
-    return {'profile':profile,'snapshot':snapshot,'execution':execution}
+    from repository_inspector import repository_controls
+    return repository_controls()
 
 
 def review_plan(raw,mode,profile_context,chosen,default_type='Class',semantic_profile='uml',
@@ -70,6 +35,10 @@ def review_plan(raw,mode,profile_context,chosen,default_type='Class',semantic_pr
         for rel in page['relationships']:
             selected=(relation_types or {}).get(page['name'],{}).get(rel['source_relationship_id'])
             if selected: rel['relationship_type']=selected
+    proposals=propose_decisions(document,profile,snapshot)
+    for node_id,decision in ebase.items():
+        if decision['master_guid']: proposals[node_id]=decision
+    ebase=proposals
     initial=build_plan(document,profile,snapshot,ebase,rbase)
     key=hashlib.sha256(raw+json.dumps([profile,chosen,document_id,element_types,relation_types,fingerprint(snapshot)],sort_keys=True).encode()).hexdigest()[:16]
     st.subheader('Review impor repository-aware')
@@ -81,11 +50,14 @@ def review_plan(raw,mode,profile_context,chosen,default_type='Class',semantic_pr
             'Semantic Type':EA_TYPE_LABELS.get(n['ea_type'],n['ea_type']),'Master GUID':n['master_guid'],
             'Business ID':n.get('business_id',''),'Qualified package path':'','Action':n['action'],'Approve NEW':False,'Distinct object confirmed':False,'Same master confirmed':False,
             'Event definition':n.get('event_definition',''),'Event direction':n.get('event_direction',''),'Gateway type':n.get('gateway_type',''),
+            'Proposal reason':ebase.get(n['id'],{}).get('proposal_reason',''),
             'Candidates':' | '.join(c['guid']+' '+c['name']+' '+c.get('package_path','') for c in n['candidates'])})
-    edited=st.data_editor(rows,hide_index=True,disabled=['Source ID','Source Element','Inferred Type','Candidates'],
-        column_order=None if advanced else ['Source Element','Inferred Type','Semantic Type','Master GUID','Action','Approve NEW','Candidates'],
-        column_config={'Action':st.column_config.SelectboxColumn(options=['REVIEW','REUSE','NEW'],required=True),
-                       'Semantic Type':st.column_config.SelectboxColumn(options=list(EA_LABEL_TYPES),required=True),
+    edited=st.data_editor(rows,hide_index=True,disabled=['Source ID','Source Element','Inferred Type','Candidates','Proposal reason'],
+        column_order=None if advanced else ['Source Element','Inferred Type','Semantic Type','Master GUID','Action','Approve NEW','Proposal reason','Candidates'],
+        column_config={'Source Element':'Elemen sumber','Inferred Type':'Tipe sumber','Master GUID':'GUID master',
+                       'Proposal reason':'Alasan usulan','Approve NEW':'Setujui objek baru','Candidates':'Kandidat katalog',
+                       'Action':st.column_config.SelectboxColumn('Keputusan',options=['REVIEW','REUSE','NEW'],required=True),
+                       'Semantic Type':st.column_config.SelectboxColumn('Tipe EA usulan',options=list(EA_LABEL_TYPES),required=True),
                        'Event definition':st.column_config.SelectboxColumn(options=['','None','Message']),
                        'Event direction':st.column_config.SelectboxColumn(options=['','catch','throw']),
                        'Gateway type':st.column_config.SelectboxColumn(options=list(dict.fromkeys(['','Exclusive','Parallel','Inclusive']+[n.get('gateway_type','') for n in initial['nodes']])))},key='plan_nodes_'+key)
@@ -95,7 +67,7 @@ def review_plan(raw,mode,profile_context,chosen,default_type='Class',semantic_pr
                               'same_master_confirmed':r['Same master confirmed'],'event_definition':r['Event definition'],
                               'event_direction':r['Event direction'],'gateway_type':r['Gateway type']} for r in edited}
     current=build_plan(document,profile,snapshot,decisions)
-    st.caption('Relasi adalah objek repository global. PROPOSE_CREATE belum mengizinkan penulisan. Konfirmasikan tipe/meaning serta persetujuan per baris.')
+    st.caption('REVIEW berarti NEEDS_REVIEW. Relasi adalah objek repository global. PROPOSE_CREATE belum mengizinkan penulisan. Konfirmasikan tipe/meaning serta persetujuan per baris.')
     relation_rows=[]
     nodes={n['id']:n for n in current['nodes']}
     for r in current['relationships']:

@@ -32,6 +32,8 @@ __pycache__/
 .diagramgene/
 *.qea
 *.qeax
+*.qea-*
+*.qeax-*
 *.eap
 *.eapx
 *.catalogue.json

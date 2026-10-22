@@ -11,11 +11,52 @@ Use your existing working EA/Wine setup. No COM bridge, Windows VM, Wine reinsta
 3. In A create the two intended Associations from Manager to those Activities, named `bertanggung jawab`, with source-to-destination direction. Record ElementGUID/ElementID and ConnectorGUID/ConnectorID. Give one connector a distinctive role/cardinality/qualifier and a non-secret test tagged value.
 4. Add a native BPMN Business Process diagram in A with Pool `Telkom Infra`, Lane `Finance`, two Activities and a Sequence Flow. Create a second Pool with one Activity and a **Message Flow** between Activities in distinct Pools. Use the BPMN toolbox, not generic elements with typed names. Record owning ParentID chains and actual base Types/qualified StereotypeEx values. Enable the BPMN2.0 and ArchiMate3 technologies.
 
-## Export and read-only validation
+## Direct QEA reader qualification (vNext)
+
+Before the exporter-based checks below, qualify the new default route on this same
+EA-created synthetic file. This section is **NOT RUN** in the cloud environment.
+
+1. Record the macOS file path and the path EA/Wine actually reports. Close EA so
+   SQLite has completed its writes. Do not delete/copy journals or WAL files.
+2. Run DiagramGene locally on `127.0.0.1`. Choose **Repository EA → Local Testing
+   → File QEA lokal**, enter the macOS path, click **Analisis repository**. Compare
+   package/object/diagram/connector counts against EA. Check names, actual GUIDs,
+   IDs, ancestry, types/stereotypes, diagram geometry and connector orientation
+   using the inspector. Pick OPCO-A (or broader owning scope) and Imports by name.
+3. Review/correct the proposed Wine locator and acknowledge this capture. Upload
+   `examples/manager_dan_proses.drawio`. Confirm the two Actors propose the single
+   OPCO-A Manager GUID, never the same-named OPCO-B Actor. Broaden to a catalogue
+   containing both: ambiguity must require manual mapping.
+4. Compare the direct v2 catalogue against the Automation exporter output for
+   the same root. Element/connector IDs, GUIDs, qualified stereotypes, parentage,
+   role properties, tag/Notes hashes must agree. Unknown storage variants must
+   produce NEEDS_REVIEW/incomplete, not silently be treated as complete. Record
+   failing columns/enums and EA version privately; use the exporter fallback.
+5. While EA remains closed, optionally hash the source `.qea` before and after
+   analysis/inspection/refresh (`shasum -a 256 /path/to/file.qea`); it must match.
+   Inspect ignored local cache files: no raw database, Notes bodies, documents,
+   credentials or unknown xref descriptions should be stored.
+6. Reopen the exact repository in EA and run generated VALIDATE_ONLY. Expect zero
+   mutations. A different locator/clone, missing master, changed MDG/type/parent,
+   connector direction/role/tag mismatch, unreviewed path or ambiguous endpoint
+   must fail before creating output. Perform the execution/idempotency checks
+   below only after these validations pass.
+7. Change one master in EA, close EA, return to DiagramGene: stale analysis must
+   be rejected; **Segarkan repository** must reread and reset mapping/path review.
+   A file with WAL/journal/SHM must be rejected without sidecar deletion. Confirm
+   unsupported `.qeax`/schema errors offer the existing snapshot route.
+8. Repeat native BPMN Pool/Lane/Task and cross-Pool Sequence/Message Flow cases.
+   Confirm actual MDG stereotypes/tags/ownership, existing ConnectorGUID reuse and
+   zero master updates. Unknown semantic references must block reuse.
+
+Record actual PASS/FAIL, counts, versions and private evidence for every case.
+Stub success and a visually correct diagram do not establish native acceptance.
+
+## Optional exporter fallback and read-only validation
 
 5. Select Catalogue, run the supplied `export_ea_catalogue.js` as **JScript**. Confirm the model's package/element/connector counts and modified properties did not change. Save only its JSON output privately. Check that hierarchy, IDs, GUIDs, aliases, native stereotypes, Pool/Lane parents and connector metadata agree with EA; Notes and credentials must be absent.
 6. If the exporter flags incomplete metadata or cannot verify ConnectionString identity, stop and record the unsupported API/property/connection form. Do not edit the script to bypass the guard. Validate whether your installed EA exposes the supported interface before adapting it.
-7. In DiagramGene choose **Local Testing**, upload that snapshot, verify the exact locator reported by EA (possibly a Wine `Z:/...` path), pin Catalogue root, OPCO-A scope GUID and Imports output GUID. Keep `VALIDATE_ONLY`.
+7. In DiagramGene choose **Local Testing → Snapshot JSON/CSV (lanjutan)**, upload that snapshot, verify the exact locator reported by EA (possibly a Wine `Z:/...` path), pin Catalogue root, OPCO-A scope GUID and Imports output GUID in advanced settings. Keep `VALIDATE_ONLY`.
 8. Upload `examples/manager_dan_proses.drawio`, choose Generic/UML. Bind both Managers to the A Actor, each process to its corresponding Activity, and each relationship to its approved ConnectorGUID. Confirm semantics. For the connector with non-default role/tag properties, inspect the properties in EA before selecting **Accept existing properties**. Download and run validation JScript.
 9. Expect PREFLIGHT followed by `VALIDATE_ONLY: repository unchanged.` No package, diagram, element, connector, tagged value or role property may be created/updated. Compare counts, master Notes, parentage, end properties and GUID/ID values, rather than judging by diagram appearance.
 

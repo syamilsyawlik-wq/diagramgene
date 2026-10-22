@@ -60,6 +60,10 @@ function dgPreflight(){
     if(!PLAN.profile.expected_identity||dgJson(actual)!=dgJson(PLAN.profile.expected_identity)){dgFail('Active repository identity does not match the selected profile.');}
     if(PLAN.profile.environment=='production'&&actual.kind!='server'){dgFail('Production profile cannot execute against a local clone.');}
     if(PLAN.profile.environment=='local'&&actual.kind!='local'){dgFail('Local Testing cannot execute against a server repository.');}
+    if(PLAN.repository_source&&PLAN.repository_source.trusted_capture){
+        if(PLAN.profile.environment!='local'||!PLAN.profile.qea_identity_reviewed){dgFail('Direct QEA identity binding requires reviewed local Wine locator; no production authorization.');}
+        dgLog({phase:'IDENTITY_SCOPE',confidence:PLAN.repository_source.identity_confidence,
+            limitation:'Locator/model metadata checks are not a globally unique repository identity or an atomic file-freshness proof.'});}
     if(PLAN.errors.length){dgFail('Plan validation: '+PLAN.errors.join(' | '));}
     dgTarget=PLAN.profile.output_package_guid?Repository.GetPackageByGuid(PLAN.profile.output_package_guid):Repository.GetTreeSelectedPackage();
     if(!dgTarget){dgFail('Output package missing; no writes performed.');}

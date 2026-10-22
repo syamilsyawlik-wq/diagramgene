@@ -121,9 +121,13 @@ if mode == "generic":
     if generic_profile == "archimate":
         st.info("Tipe dari nama/lapisan adalah usulan: periksa tabel pemetaan sebelum konversi. "
                 "Profil ArchiMate 3 harus aktif di Sparx EA. Tipe relasi dapat dipilih di tabel relasi.")
-    use_catalogue = st.checkbox("Pakai ulang objek dari katalog EA", value=True,
-                                help="Diagram memakai ElementID/GUID objek katalog yang sama, bukan salinan baru.")
-    if use_catalogue:
+    if repository_context.get("provider") == "local_qea":
+        use_catalogue = bool(repository_context.get("snapshot"))
+        st.caption("Katalog QEA dari sidebar dipakai pada review impor di bawah. Reuse memerlukan tipe, scope, dan identitas yang sesuai.")
+    else:
+        use_catalogue = st.checkbox("Pakai ulang objek dari katalog EA", value=True,
+                                    help="Diagram memakai ElementID/GUID objek katalog yang sama, bukan salinan baru.")
+    if use_catalogue and repository_context.get("provider") != "local_qea":
         st.caption("Actor Manager akan dipakai ulang dari katalog dan dihubungkan ke proses baru. "
                    "Pencocokan diperiksa saat script dijalankan pada model EA tujuan.")
         with st.expander("Katalog EA: konfigurasi dan ekspor metadata", expanded=True):
@@ -339,15 +343,15 @@ if mode == "generic" and chosen:
         for row in edited:
             kind = EA_LABEL_TYPES[row["Tipe elemen"]]
             key = (row["Halaman"], row["ID"])
-            trusted_type = kind if basis[key] != "default" or row["Tipe elemen"] != defaults[key] else None
+            trusted_type = kind if basis[key] in ("jenis bentuk", "bentuk sumber") or row["Tipe elemen"] != defaults[key] else None
             candidates = catalogue_candidates(catalogue_names, row["Nama"], trusted_type)
             candidates_by_row[key] = candidates
             binding_rows.append({"Halaman": row["Halaman"], "ID": row["ID"], "Nama": row["Nama"],
                                  "Tipe elemen": row["Tipe elemen"],
-                                 "GUID katalog": candidates[0]["guid"] if len(candidates) == 1 else "",
+                                 "GUID katalog": candidates[0]["guid"] if len(candidates) == 1 and trusted_type == candidates[0]["ea_type"] else "",
                                  "Kandidat": " | ".join(c["package_path"] + " / " + c["name"] + " " + c["guid"] for c in candidates)})
         with st.expander("Cocokkan dengan objek katalog EA", expanded=True):
-            st.caption("GUID kosong: pencarian saat runtime berdasarkan nama + tipe untuk tipe wajib katalog. "
+            st.caption("GUID kosong: keputusan menunggu review pada tabel impor. Nama saja tidak cukup untuk reuse. "
                        "Nama ganda harus dipilih dengan GUID. Objek yang dipakai ulang tetap berada dalam package asal.")
             bound_rows = st.data_editor(binding_rows, hide_index=True,
                 disabled=["Halaman", "ID", "Nama", "Tipe elemen", "Kandidat"],

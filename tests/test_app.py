@@ -26,7 +26,10 @@ class AppTests(unittest.TestCase):
         at = AppTest.from_file(str(ROOT / "app.py"), default_timeout=20)
         # Gunakan secret dalam memori; tidak membaca secrets pengguna.
         at.secrets = {} if password is None else {"APP_PASSWORD": password}
-        return at.run()
+        at.run()
+        # Existing tests exercise the backward-compatible snapshot workflow.
+        at.selectbox(key='repository_source').set_value('Snapshot JSON/CSV (lanjutan)').run()
+        return at
 
     def assert_no_exception(self, at):
         self.assertEqual(len(at.exception), 0, [e.message for e in at.exception])
@@ -247,7 +250,7 @@ class AppTests(unittest.TestCase):
             self.assertEqual(result['import_plan']['mode'],'VALIDATE_ONLY')
             self.assertFalse(result['import_plan']['can_execute'])  # A root GUID alone is insufficient authorization.
 
-    def test_catalogue_metadata_turns_plain_manager_note_into_reference_to_actor(self):
+    def test_name_only_catalogue_suggestion_requires_manual_master_mapping(self):
         at = self.app(self.password)
         source = (ROOT / "examples/manager_dan_proses.drawio").read_bytes().replace(b"shape=umlActor", b"shape=note")
         diagram = io.BytesIO(source); diagram.name = "manager.drawio"
@@ -261,8 +264,9 @@ class AppTests(unittest.TestCase):
             for page in result["pages"]:
                 manager = next(i for i in page["items"] if i["key"] == "manager")
                 self.assertEqual(manager["ea_type"], "Actor")
-                self.assertEqual(manager["catalogue_guid"], MANAGER)
+                self.assertEqual(manager["catalogue_guid"], "")
                 self.assertEqual(page["links"][0]["ea_type"], "Association")
+            self.assertFalse(result['import_plan']['can_execute'])
 
     def test_ambiguous_catalogue_name_blocks_generation_in_ui(self):
         at = self.app(self.password)

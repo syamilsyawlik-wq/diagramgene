@@ -45,6 +45,7 @@ def normalise_profile(profile):
               'output_package_guid': guid(profile['output_package_guid']) if profile.get('output_package_guid') else '',
               'opco': str(profile.get('opco', '')).strip(),
               'last_snapshot_at': str(profile.get('last_snapshot_at', '')),
+              'qea_identity_reviewed': boolean_option(profile,'qea_identity_reviewed'),
               'allow_new_elements': boolean_option(profile,'allow_new_elements',environment=='local')}
     return result
 
